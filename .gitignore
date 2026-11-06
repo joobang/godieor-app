@@ -1,0 +1,15 @@
+.DS_Store
+.build/
+work/
+.env
+.env.*
+!.env.example
+.dev.vars*
+node_modules/
+.wrangler/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcresult
+*.p12
+*.mobileprovision
