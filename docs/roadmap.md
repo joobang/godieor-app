@@ -1,13 +1,16 @@
-# 초기 작업 순서
+# 다음 작업 순서 · 세 저장소 기준
 
-1. **현재:** iOS 시작 프로젝트, 제품 범위, 무료 환경 제안, AI 역할/판정 규칙 초안.
-2. **기준 확정:** acceptance를 독립 검토하고 사용자 승인 기록을 남긴다.
-   기술 제안과 OTT 부분 지원 범위를 확정한다.
-3. **검증 경로:** 고정 SHA snapshot → 별도 build 사본 → 실행 검사 수집 → 독립 AI 리뷰 → verdict.
-   운영 비밀이 없는 실행 사용자/격리 환경에서 읽기·쓰기 경계를 실제로 확인한다.
-4. **첫 제품 작업:** 가상임을 명시한 독립 fixture로 이벤트 시간·중복·필터·설정 저장을 검증.
-5. **첫 실제 연동:** API 키/조건 확인 후 영화 → EPL → 게임 → 근거가 확보된 OTT 드라마.
-   네 분야는 모두 MVP 목표지만 한 번에 연결하지 않는다.
-6. **운영 준비:** 무료 사용량·캐시·업데이트 정책 확인, 원격 Workers/D1 설정, iOS 배포 선택.
+공통 작업 순서의 원본은 [docs/system/plan.md](system/plan.md)다.
+[iOS 담당 작업](repository-plan.md), [정책 결정 목록](system/policies.md)을 함께 읽는다.
 
-자동 수정 루프·CI 강제 게이트·멀티 모델 어댑터·범용 워크플로 엔진은 후속 범위다.
+1. 사용자 정책 답변을 기록하고 미정 항목을 유지한다.
+2. backend API/이벤트 계약과 독립 acceptance 변경안을 검토한다.
+3. 두 SHA·계약·DB 조합을 기록하는 evidence v2와 snapshot/실행 경계를 만든다.
+4. backend의 임시 DB·fixture API와 iOS 소비를 연결해 한 가지 통합 흐름을 검사한다.
+5. 네 분야의 실제 제공처를 순차 연결하고 부분 지원·지연·누락을 확인한다.
+6. 검증된 버전 조합으로 원격 운영·iOS 배포를 준비한다.
+
+우선 목표는 로컬 PostgreSQL·Prisma·NestJS API와 Simulator/본인 iPhone 연결이다.
+최종 형태는 iPhone + 클라우드 API/DB, Mac verifier로 확정했으며 현재는 1단계 준비 문서까지다. backend 실제 코드, evidence v2, 자동 runner, 실제 권한 격리,
+실제 연동과 원격 배포는 아직 구현하지 않았다.
+기술 결정은 각 저장소 ADR, 통합 학습 카탈로그는 verifier/docs/learning을 원본으로 유지한다.

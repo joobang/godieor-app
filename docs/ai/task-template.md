@@ -17,6 +17,9 @@
 ## 독립 검증 handoff
 
 - app base/head SHA (미커밋이면 명시):
+- backend base/head SHA (미커밋이면 명시):
+- API 계약 버전/digest·마이그레이션 집합 digest:
+- 검사 범위: app-only / backend-only / integration:
 - verifier SHA/dirty 상태:
 - 승인 기준 버전/digest:
 - 외부 리뷰에 전달할 자료:
