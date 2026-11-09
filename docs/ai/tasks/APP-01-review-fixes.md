@@ -1,9 +1,9 @@
 # APP-01H · 독립 리뷰 수정과 UI 확인
-- 상태: 진행. 담당 codex-app-review-fixes.
+- 상태: 수정·작성자 UI 확인·독립 정적 재검토 완료. 담당 해제.
 - 요구사항: GD-001/004/008 (초안). base app 0493cf8, backend 24899cb, verifier ac671df.
 - 범위: 독립 리뷰(IR-001~003) 수정, iOS 빌드 및 날짜→목록→상세/필터 UI 확인.
 - 실패 사례: 최신 상세 상태와 목록 상태 불일치, EPL 개최국 누락, 오래된 revision 응답 덮어쓰기.
-- LEARN-ID: 후속 기록 연결 예정. 독립 승인/통합 PASS는 이 작업에 포함하지 않는다.
+- LEARN-ID: LEARN-0012. 독립 승인/통합 PASS는 이 작업에 포함하지 않는다.
 
 ## 결과
 - 독립 reviewer Godel(01a1bf0c-b63f-7413-bca2-bf2503fc400f), fork_context=false: 구현 대화/작업 카드/학습 기록 없이 고정 app e98e863→f36adb7 및 backend85ea4f3 계약 검토. IR-001 최신 상세 상태 미반영(high), IR-002 EPL 개최국 누락(medium), IR-003 이전 revision 날짜 응답 덮어쓰기(medium) 보고. 모두 수정.
