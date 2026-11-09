@@ -22,7 +22,7 @@ SOURCES = {
     "backend": (
         "AGENTS.md", "README.md", "docs/local-development.md",
         "contracts/README.md", "contracts/implementation.md", "contracts/openapi.yaml",
-        "docs/pipeline.md", "docs/decisions/README.md",
+        "docs/pipeline.md", "docs/ott-candidates.md", "docs/decisions/README.md",
         "docs/reviews/2026-11-09-contract-review.md", "docs/data-source-assessment.md",
         "docs/research/2026-11-09-ott-feasibility.md", "docs/research/2026-11-09-ott-access.json",
     ),
