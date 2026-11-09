@@ -1,7 +1,7 @@
 # iOS의 API 소비 계약 초안
 
 - 작업 SYS-02 / PROD-001~008. 상태: 구현 담당의 소비자 관점 설계, 독립 리뷰/실제 decode 결과 아님.
-- backend 계약 0.1.0-draft.1. 정확한 commit/digest는 [참조 파일](contract-reference.json).
+- backend 계약 0.1.0-draft.2. 정확한 commit/digest는 [참조 파일](contract-reference.json).
 - 소유 원본은 backend/contracts. iOS 저장소에서 OpenAPI 사본을 별도 수정하지 않는다.
 
 ## 캘린더에서 필요한 순서
@@ -30,3 +30,5 @@
 서비스·기기 조건은 해당 분야에만 적용한다. 예: 넷플릭스를 골라도 극장 영화는 유지한다.
 SDK 자동 생성/Swift DTO/실제 iOS 네트워크 연결은 아직 없다. 개발 단계에 계약 decode를 직접 확인해야 한다.
 알림/팀 구독/시청 기록은 계약 소비 범위가 아니다.
+
+로컬 공개 API는 현재 실행 가능하지만 iOS 연결은 아직 없다. Google와 /me는 미구현 경계이므로 로그인/찜이 실제로 저장된다고 표현하지 않는다.
