@@ -24,6 +24,7 @@ SOURCES = {
         "contracts/README.md", "contracts/implementation.md", "contracts/openapi.yaml",
         "docs/pipeline.md", "docs/decisions/README.md",
         "docs/reviews/2026-11-09-contract-review.md", "docs/data-source-assessment.md",
+        "docs/research/2026-11-09-ott-feasibility.md", "docs/research/2026-11-09-ott-access.json",
     ),
     "verifier": (
         "AGENTS.md", "README.md", "requirements/README.md",
