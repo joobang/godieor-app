@@ -206,7 +206,6 @@ struct PublicAPI {
 
     func detail(id: String, filters: PublicFilters) async throws -> ReleaseDetail {
         try await get("events/\(id)", query: [
-            .init(name: "country", value: filters.country),
             .init(name: "timeZone", value: filters.timeZone)
         ])
     }
