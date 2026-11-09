@@ -2,10 +2,10 @@
 
 ‘곧이어’ 만날 영화·OTT 드라마·게임·EPL 일정을 모으는 iOS 앱.
 
-현재 단계는 **초기 환경 구성**이다. SwiftUI 시작 화면만 있으며 실제 일정 API는 연결하지 않았다.
+현재 단계는 **공개 일정 iOS 연결 초기 구현**이다. 월간 달력·날짜별 목록·상세를 백엔드 공개 API에 연결했으며, 실행 중인 로컬 서버가 필요하다. 시뮬레이터 실동작/독립 통합 검증은 아직 완료되지 않았다.
 검증 시스템은 별도 저장소 [godieor-verifier](https://github.com/joobang/godieor-verifier)에서 관리한다.
 일정 수집·정규화·DB·조회 API는 [godieor-backend](https://github.com/joobang/godieor-backend)가 담당한다.
-backend는 로컬 PostgreSQL·Prisma·공개 API·가상 수집까지 구성했으며 실제 제공처와 iOS 연결은 아직 없다.
+backend는 로컬 PostgreSQL·Prisma·공개 API·가상 수집 및 검토된 OTT 수동 반영까지 구성했다. iOS 공개 조회 클라이언트 구현은 빌드했지만 실제 연결 실행 검증은 남았다.
 세 저장소의 현재 상태·미해결 문제·다음 작업은 [현재 상태](docs/system/status.md)를 기준으로 확인한다.
 
 ## 로컬 시작
@@ -13,6 +13,8 @@ backend는 로컬 PostgreSQL·Prisma·공개 API·가상 수집까지 구성했�
 1. Xcode에서 `ios/GODIEOR.xcodeproj`를 연다.
 2. GODIEOR scheme과 설치된 iPhone Simulator를 선택해 실행한다.
 3. 서명 없는 빌드 확인: `./scripts/build-ios.sh`.
+
+시뮬레이터의 기본 API는 `http://localhost:3000/v1`이다. 로컬 backend가 실행 중이어야 일정이 표시된다. Xcode Scheme 실행 환경 변수 `GODIEOR_API_BASE_URL`로 주소를 바꿀 수 있다. 실기기는 Mac의 localhost가 아닌 휴대폰에서 접근 가능한 API 주소와 HTTPS 구성이 필요하다. 초기 화면 분야 선택은 임시 상태이며 계정 동기화는 아직 구현하지 않았다.
 
 실기기는 Xcode에서 본인 Personal Team을 선택한다. 저장소에 팀 ID나 인증서를 기록하지 않는다.
 iOS 17 이상, SwiftUI, 외부 패키지 없는 시작점을 유지한다. 계정은 Google 연동 방향이며 개인 설정 저장/동기화 범위는 P03 상세 정책에 따라 정한다.
