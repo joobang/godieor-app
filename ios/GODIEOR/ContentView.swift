@@ -1,17 +1,18 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var month = CalendarDay.iso.date(from: DateComponents(year: 2026, month: 11, day: 1))!
+    @State private var month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
     @State private var selectedDate: String?
-    @State private var activeCategories: Set<String> = ["movie", "ott"]
+    @AppStorage("temporaryVisibleCategories") private var storedCategories = "movie,ott"
     @State private var calendar: ReleaseCalendar?
+    @State private var lastCalendars: [String: ReleaseCalendar] = [:]
+    @State private var showingCachedCalendar = false
     @State private var events: [ReleaseEvent] = []
     @State private var loading = false
     @State private var loadingDay = false
     @State private var errorText: String?
     @State private var dayError: String?
     @State private var selectedEvent: ReleaseEvent?
-    @State private var conflictRetries = 0
     private let api = PublicAPI()
     private let options = [("movie", "영화"), ("ott", "OTT"), ("game", "게임"), ("epl", "EPL")]
 
@@ -19,7 +20,9 @@ struct ContentView: View {
         let c = CalendarDay.iso.dateComponents([.year, .month], from: month)
         return String(format: "%04d-%02d", c.year!, c.month!)
     }
+    private var activeCategories: Set<String> { Set(storedCategories.split(separator: ",").map(String.init)) }
     private var categories: [String] { options.map { $0.0 }.filter { activeCategories.contains($0) } }
+    private var selectionKey: String { monthKey + ":" + categories.joined(separator: ",") }
     private var days: [String: ReleaseDay] { Dictionary(uniqueKeysWithValues: (calendar?.days ?? []).map { ($0.date, $0) }) }
 
     var body: some View {
@@ -43,42 +46,59 @@ struct ContentView: View {
                     HStack(spacing: 6) {
                         ForEach(options, id: \.0) { option in
                             Button(option.1) {
-                                if activeCategories.contains(option.0) { activeCategories.remove(option.0) }
-                                else { activeCategories.insert(option.0) }
+                                var selected = activeCategories
+                                if !selected.insert(option.0).inserted { selected.remove(option.0) }
+                                storedCategories = options.map(\.0).filter { selected.contains($0) }.joined(separator: ",")
                             }
                             .buttonStyle(.bordered)
                             .tint(activeCategories.contains(option.0) ? .accentColor : .gray)
                         }
                     }
-                    Text("한국 · Asia/Seoul · 비로그인 공개 일정")
+                    Text("한국 · Asia/Seoul · 비로그인 공개 일정 · 분야 선택은 이 기기에 임시 저장")
                         .font(.caption).foregroundStyle(.secondary)
-                    if categories.isEmpty {
-                        ContentUnavailableView("표시할 분야가 없어요", systemImage: "calendar", description: Text("분야를 하나 이상 선택해 주세요."))
-                    } else {
-                        if loading { ProgressView("달력 불러오는 중") }
-                        if let errorText {
-                            ContentUnavailableView("연결 실패", systemImage: "wifi.exclamationmark", description: Text(errorText))
-                            Button("다시 시도") { Task { await loadMonth() } }
-                        }
-                        monthGrid
-                        if let calendar {
-                            if calendar.freshness.contains(where: { $0.dataOrigin == "fixture" }) {
-                                Label("가상 일정이 포함되어 있어요", systemImage: "exclamationmark.circle")
-                                    .font(.caption).foregroundStyle(.orange)
-                            }
-                            if calendar.freshness.contains(where: { $0.coverage != "complete" }) {
-                                Text("제공처 일정이 일부만 수집되었을 수 있어요.").font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                        if let selectedDate { dayList(selectedDate) }
-                    }
+                    calendarContent
                 }.padding(16)
             }
             .navigationTitle("GODIEOR")
             .sheet(item: $selectedEvent) { event in
                 NavigationStack { EventDetailView(event: event, api: api) }
             }
-            .task(id: monthKey + ":" + categories.joined(separator: ",")) { await loadMonth() }
+            .task(id: selectionKey) { await loadMonth(selection: selectionKey) }
+            .task(id: (selectedDate ?? "") + ":" + selectionKey + ":" + (calendar?.catalogRevision ?? "")) {
+                if let selectedDate { await loadDay(selectedDate, selection: selectionKey) }
+            }
+        }
+    }
+
+    private var calendarContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if categories.isEmpty { Text("전체 분야 표시 중").font(.caption).foregroundStyle(.secondary) }
+            if loading { ProgressView("달력 불러오는 중") }
+            if let errorText {
+                ContentUnavailableView("연결 실패", systemImage: "wifi.exclamationmark", description: Text(errorText))
+                Button("다시 시도") { Task { await loadMonth(selection: selectionKey) } }
+            }
+            if showingCachedCalendar {
+                Label("이전에 조회한 달력을 표시해요. 최신 일정이 아닐 수 있어요.", systemImage: "clock.arrow.circlepath")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+            if calendar != nil { monthGrid }
+            if let calendar {
+                if calendar.freshness.contains(where: { $0.dataOrigin == "fixture" }) {
+                    Label("가상 일정이 포함되어 있어요", systemImage: "exclamationmark.circle")
+                        .font(.caption).foregroundStyle(.orange)
+                }
+                if calendar.freshness.contains(where: { $0.coverage != "complete" }) {
+                    Text("제공처 일정이 일부만 수집되었을 수 있어요.").font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(calendar.freshness, id: \.providerKey) { source in
+                    if source.lastAttemptStatus != "success" || source.coverage != "complete" {
+                        Text("\(source.providerKey): \(source.lastAttemptStatus) · 마지막 성공 \(source.lastSuccessfulAt ?? "확인되지 않음")")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            if let selectedDate { dayList(selectedDate) }
         }
     }
 
@@ -101,7 +121,6 @@ struct ContentView: View {
                         let day = days[date]
                         Button {
                             selectedDate = date
-                            Task { await loadDay(date) }
                         } label: {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("\(number)").font(.caption.bold())
@@ -134,7 +153,7 @@ struct ContentView: View {
             if loadingDay { ProgressView("일정 불러오는 중") }
             if let dayError {
                 Text(dayError).foregroundStyle(.red).font(.footnote)
-                Button("다시 시도") { Task { await loadDay(date) } }
+                Button("다시 시도") { Task { await loadDay(date, selection: selectionKey) } }
             }
             if !loadingDay && dayError == nil && events.isEmpty {
                 Text("확인된 일정이 없어요.").foregroundStyle(.secondary)
@@ -165,43 +184,56 @@ struct ContentView: View {
         selectedDate = nil
     }
 
-    @MainActor private func loadMonth() async {
-        calendar = nil
+    @MainActor private func loadMonth(selection: String) async {
+        calendar = lastCalendars[selection]
+        showingCachedCalendar = calendar != nil
         events = []
         errorText = nil
         dayError = nil
-        guard !categories.isEmpty else { return }
         loading = true
-        defer { loading = false }
+        defer { if selection == selectionKey { loading = false } }
         do {
-            calendar = try await api.calendar(month: monthKey, categories: categories)
-            conflictRetries = 0
-            if let selectedDate { await loadDay(selectedDate) }
+            let result = try await api.calendar(month: monthKey, categories: categories)
+            guard !Task.isCancelled, selection == selectionKey else { return }
+            calendar = result
+            lastCalendars[selection] = result
+            showingCachedCalendar = false
         } catch is CancellationError { return }
-        catch { errorText = error.localizedDescription }
+        catch {
+            guard !Task.isCancelled, selection == selectionKey else { return }
+            errorText = error.localizedDescription
+        }
     }
 
-    @MainActor private func loadDay(_ date: String) async {
+    @MainActor private func loadDay(_ date: String, selection: String) async {
         guard let revision = calendar?.catalogRevision else { return }
         events = []
         dayError = nil
         loadingDay = true
-        defer { loadingDay = false }
-        do { events = try await api.events(date: date, categories: categories, revision: revision) }
+        defer { if selectedDate == date && selection == selectionKey { loadingDay = false } }
+        do {
+            let result = try await api.events(date: date, categories: categories, revision: revision)
+            guard !Task.isCancelled, selectedDate == date, selection == selectionKey else { return }
+            events = result
+        }
         catch PublicAPIError.catalogChanged {
-            if conflictRetries < 1 {
-                conflictRetries += 1
-                calendar = nil
-                do {
-                    calendar = try await api.calendar(month: monthKey, categories: categories)
-                    if let freshRevision = calendar?.catalogRevision {
-                        events = try await api.events(date: date, categories: categories, revision: freshRevision)
-                    }
-                } catch { dayError = error.localizedDescription }
-            } else { dayError = PublicAPIError.catalogChanged.localizedDescription }
+            guard !Task.isCancelled, selectedDate == date, selection == selectionKey else { return }
+            do {
+                let updated = try await api.calendar(month: monthKey, categories: categories)
+                let result = try await api.events(date: date, categories: categories, revision: updated.catalogRevision)
+                guard !Task.isCancelled, selectedDate == date, selection == selectionKey else { return }
+                calendar = updated
+                lastCalendars[selection] = updated
+                showingCachedCalendar = false
+                events = result
+            } catch {
+                if !Task.isCancelled && selectedDate == date && selection == selectionKey { dayError = error.localizedDescription }
+            }
         }
         catch is CancellationError { return }
-        catch { dayError = error.localizedDescription }
+        catch {
+            if !Task.isCancelled && selectedDate == date && selection == selectionKey { dayError = error.localizedDescription }
+        }
     }
 }
 
@@ -241,7 +273,8 @@ private struct EventDetailView: View {
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("닫기") { dismiss() } } }
         .task {
             do { detail = try await api.detail(id: event.id) }
-            catch { self.error = "상세 조회 실패: \(error.localizedDescription)" }
+            catch is CancellationError { return }
+            catch { if !Task.isCancelled { self.error = "상세 조회 실패: \(error.localizedDescription)" } }
         }
     }
 }
