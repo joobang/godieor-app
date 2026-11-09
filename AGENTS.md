@@ -1,6 +1,9 @@
 # GODIEOR 앱 개발 규칙
 
 - GODIEOR(고디어)는 ‘곧이어’를 뜻한다. KNU 및 wd-harness와 독립된 개인 프로젝트다.
+- 새 대화/계정은 `docs/system/status.md` → `docs/system/handoff.md`부터 읽고 Git HEAD·branch·dirty 상태를 확인한다.
+  작업 시작·인계·종료는 handoff 절차와 `docs/ai/task-template.md`를 따른다. 종료 전 상태/카드/공통 사본을 갱신한다.
+  동시 개발은 작업별 `codex/` 브랜치·별도 worktree로 분리하고 같은 checkout을 동시에 수정하지 않는다.
 - 이 저장소의 에이전트는 설계·구현 담당이다. 외부 검증 결과를 스스로 승인하지 않는다.
 - 사용자 확정 사항은 `docs/product.md`, 기술 제안은 `docs/decisions/001-foundation.md`를 읽는다.
 - 세 저장소 책임·작업 순서·정책 질문은 `docs/system/`을 먼저 읽는다.
