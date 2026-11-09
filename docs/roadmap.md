@@ -13,7 +13,7 @@
 
 우선 목표는 로컬 PostgreSQL·Prisma·NestJS API와 Simulator/본인 iPhone 연결이다.
 최종 형태는 iPhone + 클라우드 API/DB, Mac verifier로 확정했다. backend 로컬 공개 API·DB·가상 파이프라인은 구성했다.
-iOS 연결, evidence v2, 자동 runner, 실제 권한 격리, 실제 제공처 연동과 원격 배포는 아직 구현하지 않았다.
+iOS 공개 조회 연결은 구현했고 로컬 API 연동을 작성자가 확인했다. 독립 통합 검증, evidence v2, 자동 runner, 실제 권한 격리, 전체 분야 실데이터 제공처 연동과 원격 배포는 아직 완료하지 않았다.
 기술 결정은 각 저장소 ADR, 통합 학습 카탈로그는 verifier/docs/learning을 원본으로 유지한다.
 
 

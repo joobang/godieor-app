@@ -2,10 +2,10 @@
 
 ‘곧이어’ 만날 영화·OTT 드라마·게임·EPL 일정을 모으는 iOS 앱.
 
-현재 단계는 **공개 일정 iOS 연결 초기 구현**이다. 월간 달력·날짜별 목록·상세를 백엔드 공개 API에 연결했으며, 실행 중인 로컬 서버가 필요하다. 시뮬레이터 실동작/독립 통합 검증은 아직 완료되지 않았다.
+현재 단계는 **공개 일정 iOS 연결 초기 구현**이다. 월간 달력·날짜별 목록·상세를 백엔드 공개 API에 연결했으며, 실행 중인 로컬 서버가 필요하다. 시뮬레이터에서 달력·필터 연동과 상세 HTTP 200을 작성자가 확인했으나 날짜 탭→상세 전체 UI 경로·독립 통합 검증은 아직 완료되지 않았다.
 검증 시스템은 별도 저장소 [godieor-verifier](https://github.com/joobang/godieor-verifier)에서 관리한다.
 일정 수집·정규화·DB·조회 API는 [godieor-backend](https://github.com/joobang/godieor-backend)가 담당한다.
-backend는 로컬 PostgreSQL·Prisma·공개 API·가상 수집 및 검토된 OTT 수동 반영까지 구성했다. iOS 공개 조회 클라이언트 구현은 빌드했지만 실제 연결 실행 검증은 남았다.
+backend는 로컬 PostgreSQL·Prisma·공개 API·가상 수집 및 검토된 OTT 수동 반영까지 구성했다. iOS 공개 조회 클라이언트의 빌드와 로컬 API 연결은 작성자가 확인했다. 독립 검증과 UI 세부 경로 확인은 남았다.
 세 저장소의 현재 상태·미해결 문제·다음 작업은 [현재 상태](docs/system/status.md)를 기준으로 확인한다.
 
 ## 로컬 시작
