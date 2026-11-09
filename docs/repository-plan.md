@@ -30,3 +30,5 @@ OTT는 최초 공개일만 제공한다. 회차별 공개/완결은 제외하며
 API 소비 메모와 계약 commit/digest는 docs/api에 둔다. 실제 네트워크/DTO 구현 전 계약 검토를 진행한다.
 
 2026-11-09: backend 로컬 공개 API·23 모델/초기 migration·가상 수집을 실행했다. Google/개인 쓰기·실제 제공처/iOS 연결은 미완료다. 계약 draft.2와 공식 출처 판단을 고정 참조하며 독립 실행 검증과 구분한다.
+
+후속 2026-11-09 BE-04/DATA-02B: Client 우선 쿼리/수동 OTT 반영 구현, 로컬 provider4+fixture7 조회 확인. 다음은 APP-01 공개 API client/월간 캘린더·상세이며 원천 표시를 유지한다. 자동 전수 수집/Google·개인 쓰기/독립 통합 검증은 미완료다.
