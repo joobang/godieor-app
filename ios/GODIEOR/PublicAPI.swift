@@ -1,6 +1,38 @@
 import Foundation
 
 // Matches backend contract 0.1.0-draft.2. Date-only values remain civil-date strings.
+struct CatalogOptions: Decodable {
+    struct QueryDefaults: Decodable {
+        let country: String
+        let timeZone: String
+    }
+    let contractVersion: String
+    let categories: [String]
+    let services: [String]
+    let devices: [String]
+    let countries: [String]
+    let timeZones: [String]
+    let queryDefaults: QueryDefaults
+}
+
+struct PublicFilters {
+    let categories: [String]
+    let services: [String]
+    let devices: [String]
+    let country: String
+    let timeZone: String
+
+    var query: [URLQueryItem] {
+        [
+            .init(name: "country", value: country),
+            .init(name: "timeZone", value: timeZone),
+            .init(name: "categories", value: categories.joined(separator: ",")),
+            .init(name: "services", value: services.joined(separator: ",")),
+            .init(name: "devices", value: devices.joined(separator: ","))
+        ]
+    }
+}
+
 struct ReleaseEvent: Decodable, Identifiable {
     let id: String
     let kind: String
@@ -95,6 +127,7 @@ struct ReleaseDetail: Decodable {
 
 enum PublicAPIError: LocalizedError {
     case invalidURL
+    case unsupportedContract(String)
     case status(Int)
     case catalogChanged
     case tooManyPages
@@ -102,6 +135,7 @@ enum PublicAPIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL: "API 주소를 확인해 주세요."
+        case .unsupportedContract(let version): "지원하지 않는 API 계약 버전(\(version))이에요."
         case .status(let code): "서버 요청 실패 (HTTP \(code)). 연결 및 서버 상태를 확인해 주세요."
         case .catalogChanged: "일정이 변경되어 새로 불러와야 해요."
         case .tooManyPages: "목록 페이지가 반복되어 조회를 중단했어요."
@@ -136,27 +170,27 @@ struct PublicAPI {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
-    func calendar(month: String, categories: [String]) async throws -> ReleaseCalendar {
-        try await get("calendar", query: [
-            .init(name: "month", value: month),
-            .init(name: "country", value: "KR"),
-            .init(name: "timeZone", value: "Asia/Seoul"),
-            .init(name: "categories", value: categories.joined(separator: ","))
-        ])
+    func options() async throws -> CatalogOptions {
+        let options: CatalogOptions = try await get("catalog/options")
+        guard options.contractVersion == "0.1.0-draft.2" else {
+            throw PublicAPIError.unsupportedContract(options.contractVersion)
+        }
+        return options
     }
 
-    func events(date: String, categories: [String], revision: String) async throws -> [ReleaseEvent] {
+    func calendar(month: String, filters: PublicFilters) async throws -> ReleaseCalendar {
+        try await get("calendar", query: [.init(name: "month", value: month)] + filters.query)
+    }
+
+    func events(date: String, filters: PublicFilters, revision: String) async throws -> [ReleaseEvent] {
         let next = CalendarDay.next(date)
         var query: [URLQueryItem] = [
             .init(name: "schedule", value: "dated"),
             .init(name: "from", value: date),
             .init(name: "to", value: next),
-            .init(name: "country", value: "KR"),
-            .init(name: "timeZone", value: "Asia/Seoul"),
-            .init(name: "categories", value: categories.joined(separator: ",")),
             .init(name: "catalogRevision", value: revision),
             .init(name: "limit", value: "100")
-        ]
+        ] + filters.query
         var items: [ReleaseEvent] = []
         var seen = Set<String>()
         while true {
@@ -170,10 +204,10 @@ struct PublicAPI {
         }
     }
 
-    func detail(id: String) async throws -> ReleaseDetail {
+    func detail(id: String, filters: PublicFilters) async throws -> ReleaseDetail {
         try await get("events/\(id)", query: [
-            .init(name: "country", value: "KR"),
-            .init(name: "timeZone", value: "Asia/Seoul")
+            .init(name: "country", value: filters.country),
+            .init(name: "timeZone", value: filters.timeZone)
         ])
     }
 }

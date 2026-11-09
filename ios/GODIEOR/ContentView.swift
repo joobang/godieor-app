@@ -4,6 +4,13 @@ struct ContentView: View {
     @State private var month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
     @State private var selectedDate: String?
     @AppStorage("temporaryVisibleCategories") private var storedCategories = "movie,ott"
+    @AppStorage("temporaryCountry") private var storedCountry = ""
+    @AppStorage("temporaryTimeZone") private var storedTimeZone = ""
+    @AppStorage("temporaryServices") private var storedServices = ""
+    @AppStorage("temporaryDevices") private var storedDevices = ""
+    @State private var catalogOptions: CatalogOptions?
+    @State private var optionsError: String?
+    @State private var showingFilters = false
     @State private var calendar: ReleaseCalendar?
     @State private var lastCalendars: [String: ReleaseCalendar] = [:]
     @State private var showingCachedCalendar = false
@@ -22,7 +29,22 @@ struct ContentView: View {
     }
     private var activeCategories: Set<String> { Set(storedCategories.split(separator: ",").map(String.init)) }
     private var categories: [String] { options.map { $0.0 }.filter { activeCategories.contains($0) } }
-    private var selectionKey: String { monthKey + ":" + categories.joined(separator: ",") }
+    private var activeServices: Set<String> { Set(storedServices.split(separator: ",").map(String.init)) }
+    private var activeDevices: Set<String> { Set(storedDevices.split(separator: ",").map(String.init)) }
+    private var filters: PublicFilters? {
+        guard let catalogOptions else { return nil }
+        return PublicFilters(
+            categories: categories,
+            services: catalogOptions.services.filter { activeServices.contains($0) },
+            devices: catalogOptions.devices.filter { activeDevices.contains($0) },
+            country: catalogOptions.countries.contains(storedCountry) ? storedCountry : catalogOptions.queryDefaults.country,
+            timeZone: catalogOptions.timeZones.contains(storedTimeZone) ? storedTimeZone : catalogOptions.queryDefaults.timeZone
+        )
+    }
+    private var selectionKey: String {
+        guard let filters else { return monthKey + ":options-unavailable" }
+        return ([monthKey, filters.country, filters.timeZone] + filters.categories + ["services"] + filters.services + ["devices"] + filters.devices).joined(separator: ":")
+    }
     private var days: [String: ReleaseDay] { Dictionary(uniqueKeysWithValues: (calendar?.days ?? []).map { ($0.date, $0) }) }
 
     var body: some View {
@@ -54,15 +76,23 @@ struct ContentView: View {
                             .tint(activeCategories.contains(option.0) ? .accentColor : .gray)
                         }
                     }
-                    Text("한국 · Asia/Seoul · 비로그인 공개 일정 · 분야 선택은 이 기기에 임시 저장")
+                    HStack {
+                        Text("\(filters?.country ?? "지역 확인 중") · \(filters?.timeZone ?? "시간대 확인 중") · 비로그인 공개 일정")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("필터") { showingFilters = true }.disabled(catalogOptions == nil)
+                    }
+                    Text("필터 설정은 이 기기에 임시 저장돼요.")
                         .font(.caption).foregroundStyle(.secondary)
                     calendarContent
                 }.padding(16)
             }
             .navigationTitle("GODIEOR")
             .sheet(item: $selectedEvent) { event in
-                NavigationStack { EventDetailView(event: event, api: api) }
+                if let filters { NavigationStack { EventDetailView(event: event, filters: filters, api: api) } }
             }
+            .sheet(isPresented: $showingFilters) { filterSheet }
+            .task { await loadOptions() }
             .task(id: selectionKey) { await loadMonth(selection: selectionKey) }
             .task(id: (selectedDate ?? "") + ":" + selectionKey + ":" + (calendar?.catalogRevision ?? "")) {
                 if let selectedDate { await loadDay(selectedDate, selection: selectionKey) }
@@ -72,7 +102,11 @@ struct ContentView: View {
 
     private var calendarContent: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if categories.isEmpty { Text("전체 분야 표시 중").font(.caption).foregroundStyle(.secondary) }
+            if let optionsError {
+                ContentUnavailableView("필터 정보 조회 실패", systemImage: "wifi.exclamationmark", description: Text(optionsError))
+                Button("다시 시도") { Task { await loadOptions() } }
+            }
+            if categories.isEmpty { Text("선택한 분야가 없어요. 분야를 하나 이상 선택해 주세요.").font(.caption).foregroundStyle(.secondary) }
             if loading { ProgressView("달력 불러오는 중") }
             if let errorText {
                 ContentUnavailableView("연결 실패", systemImage: "wifi.exclamationmark", description: Text(errorText))
@@ -88,11 +122,11 @@ struct ContentView: View {
                     Label("가상 일정이 포함되어 있어요", systemImage: "exclamationmark.circle")
                         .font(.caption).foregroundStyle(.orange)
                 }
-                if calendar.freshness.contains(where: { $0.coverage != "complete" }) {
+                if calendar.freshness.contains(where: { $0.coverage != "available" }) {
                     Text("제공처 일정이 일부만 수집되었을 수 있어요.").font(.caption).foregroundStyle(.secondary)
                 }
                 ForEach(calendar.freshness, id: \.providerKey) { source in
-                    if source.lastAttemptStatus != "success" || source.coverage != "complete" {
+                    if source.lastAttemptStatus != "succeeded" || source.coverage != "available" {
                         Text("\(source.providerKey): \(source.lastAttemptStatus) · 마지막 성공 \(source.lastSuccessfulAt ?? "확인되지 않음")")
                             .font(.caption2).foregroundStyle(.secondary)
                     }
@@ -100,6 +134,61 @@ struct ContentView: View {
             }
             if let selectedDate { dayList(selectedDate) }
         }
+    }
+
+    private var filterSheet: some View {
+        NavigationStack {
+            Form {
+                if let catalogOptions {
+                    Section("지역 및 시간대") {
+                        Picker("국가", selection: $storedCountry) {
+                            ForEach(catalogOptions.countries, id: \.self) { Text($0).tag($0) }
+                        }
+                        Picker("시간대", selection: $storedTimeZone) {
+                            ForEach(catalogOptions.timeZones, id: \.self) { Text($0).tag($0) }
+                        }
+                    }
+                    Section("OTT 서비스 · 선택 안 하면 전체") {
+                        ForEach(catalogOptions.services, id: \.self) { service in
+                            Toggle(service, isOn: storedSetBinding(service, key: "services"))
+                        }
+                    }
+                    Section("게임 기기 · 선택 안 하면 전체") {
+                        ForEach(catalogOptions.devices, id: \.self) { device in
+                            Toggle(device, isOn: storedSetBinding(device, key: "devices"))
+                        }
+                    }
+                    Text("OTT 서비스 필터는 OTT에, 게임 기기 필터는 게임에 적용됩니다. 계정 동기화 전까지 이 기기에만 저장됩니다.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("일정 필터")
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("완료") { showingFilters = false } } }
+        }
+    }
+
+    private func storedSetBinding(_ value: String, key: String) -> Binding<Bool> {
+        Binding(
+            get: { (key == "services" ? activeServices : activeDevices).contains(value) },
+            set: { enabled in
+                var values = key == "services" ? activeServices : activeDevices
+                if enabled { values.insert(value) } else { values.remove(value) }
+                let next = values.sorted().joined(separator: ",")
+                if key == "services" { storedServices = next } else { storedDevices = next }
+            }
+        )
+    }
+
+    @MainActor private func loadOptions() async {
+        optionsError = nil
+        do {
+            let result = try await api.options()
+            guard !Task.isCancelled else { return }
+            catalogOptions = result
+            if !result.countries.contains(storedCountry) { storedCountry = result.queryDefaults.country }
+            if !result.timeZones.contains(storedTimeZone) { storedTimeZone = result.queryDefaults.timeZone }
+        } catch is CancellationError { return }
+        catch { if !Task.isCancelled { optionsError = error.localizedDescription } }
     }
 
     private var monthGrid: some View {
@@ -185,6 +274,14 @@ struct ContentView: View {
     }
 
     @MainActor private func loadMonth(selection: String) async {
+        guard let filters, !filters.categories.isEmpty else {
+            calendar = nil
+            events = []
+            errorText = nil
+            showingCachedCalendar = false
+            loading = false
+            return
+        }
         calendar = lastCalendars[selection]
         showingCachedCalendar = calendar != nil
         events = []
@@ -193,7 +290,7 @@ struct ContentView: View {
         loading = true
         defer { if selection == selectionKey { loading = false } }
         do {
-            let result = try await api.calendar(month: monthKey, categories: categories)
+            let result = try await api.calendar(month: monthKey, filters: filters)
             guard !Task.isCancelled, selection == selectionKey else { return }
             calendar = result
             lastCalendars[selection] = result
@@ -206,21 +303,22 @@ struct ContentView: View {
     }
 
     @MainActor private func loadDay(_ date: String, selection: String) async {
+        guard let filters, !filters.categories.isEmpty else { events = []; return }
         guard let revision = calendar?.catalogRevision else { return }
         events = []
         dayError = nil
         loadingDay = true
         defer { if selectedDate == date && selection == selectionKey { loadingDay = false } }
         do {
-            let result = try await api.events(date: date, categories: categories, revision: revision)
+            let result = try await api.events(date: date, filters: filters, revision: revision)
             guard !Task.isCancelled, selectedDate == date, selection == selectionKey else { return }
             events = result
         }
         catch PublicAPIError.catalogChanged {
             guard !Task.isCancelled, selectedDate == date, selection == selectionKey else { return }
             do {
-                let updated = try await api.calendar(month: monthKey, categories: categories)
-                let result = try await api.events(date: date, categories: categories, revision: updated.catalogRevision)
+                let updated = try await api.calendar(month: monthKey, filters: filters)
+                let result = try await api.events(date: date, filters: filters, revision: updated.catalogRevision)
                 guard !Task.isCancelled, selectedDate == date, selection == selectionKey else { return }
                 calendar = updated
                 lastCalendars[selection] = updated
@@ -239,6 +337,7 @@ struct ContentView: View {
 
 private struct EventDetailView: View {
     let event: ReleaseEvent
+    let filters: PublicFilters
     let api: PublicAPI
     @Environment(\.dismiss) private var dismiss
     @State private var detail: ReleaseDetail?
@@ -272,7 +371,7 @@ private struct EventDetailView: View {
         .navigationTitle("일정 상세")
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("닫기") { dismiss() } } }
         .task {
-            do { detail = try await api.detail(id: event.id) }
+            do { detail = try await api.detail(id: event.id, filters: filters) }
             catch is CancellationError { return }
             catch { if !Task.isCancelled { self.error = "상세 조회 실패: \(error.localizedDescription)" } }
         }
