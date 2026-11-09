@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var events: [ReleaseEvent] = []
     @State private var loading = false
     @State private var loadingDay = false
+    @State private var dayRequestID = UUID()
     @State private var errorText: String?
     @State private var dayError: String?
     @State private var selectedEvent: ReleaseEvent?
@@ -305,32 +306,34 @@ struct ContentView: View {
     @MainActor private func loadDay(_ date: String, selection: String) async {
         guard let filters, !filters.categories.isEmpty else { events = []; return }
         guard let revision = calendar?.catalogRevision else { return }
+        let requestID = UUID()
+        dayRequestID = requestID
         events = []
         dayError = nil
         loadingDay = true
-        defer { if selectedDate == date && selection == selectionKey { loadingDay = false } }
+        defer { if selectedDate == date && selection == selectionKey && dayRequestID == requestID && calendar?.catalogRevision == revision { loadingDay = false } }
         do {
             let result = try await api.events(date: date, filters: filters, revision: revision)
-            guard !Task.isCancelled, selectedDate == date, selection == selectionKey else { return }
+            guard !Task.isCancelled, selectedDate == date, selection == selectionKey, dayRequestID == requestID, calendar?.catalogRevision == revision else { return }
             events = result
         }
         catch PublicAPIError.catalogChanged {
-            guard !Task.isCancelled, selectedDate == date, selection == selectionKey else { return }
+            guard !Task.isCancelled, selectedDate == date, selection == selectionKey, dayRequestID == requestID, calendar?.catalogRevision == revision else { return }
             do {
                 let updated = try await api.calendar(month: monthKey, filters: filters)
                 let result = try await api.events(date: date, filters: filters, revision: updated.catalogRevision)
-                guard !Task.isCancelled, selectedDate == date, selection == selectionKey else { return }
+                guard !Task.isCancelled, selectedDate == date, selection == selectionKey, dayRequestID == requestID, calendar?.catalogRevision == revision else { return }
                 calendar = updated
                 lastCalendars[selection] = updated
                 showingCachedCalendar = false
                 events = result
             } catch {
-                if !Task.isCancelled && selectedDate == date && selection == selectionKey { dayError = error.localizedDescription }
+                if !Task.isCancelled && selectedDate == date && selection == selectionKey && dayRequestID == requestID && calendar?.catalogRevision == revision { dayError = error.localizedDescription }
             }
         }
         catch is CancellationError { return }
         catch {
-            if !Task.isCancelled && selectedDate == date && selection == selectionKey { dayError = error.localizedDescription }
+            if !Task.isCancelled && selectedDate == date && selection == selectionKey && dayRequestID == requestID && calendar?.catalogRevision == revision { dayError = error.localizedDescription }
         }
     }
 }
@@ -343,18 +346,21 @@ private struct EventDetailView: View {
     @State private var detail: ReleaseDetail?
     @State private var error: String?
 
+    private var displayedEvent: ReleaseEvent { detail?.event ?? event }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text(event.title).font(.title2.bold())
-                LabeledContent("분야", value: event.categoryTitle)
-                LabeledContent("일정", value: (detail?.event ?? event).time.description)
-                LabeledContent("상태", value: event.statusTitle)
-                if let market = event.releaseMarket { LabeledContent("공개 지역", value: market) }
-                if !event.services.isEmpty { LabeledContent("OTT", value: event.services.joined(separator: ", ")) }
-                if !event.devices.isEmpty { LabeledContent("기기", value: event.devices.joined(separator: ", ")) }
-                LabeledContent("데이터", value: event.dataOrigin == "fixture" ? "가상 데이터" : "제공처 반영 데이터")
-                LabeledContent("최종 수정", value: event.updatedAt)
+                Text(displayedEvent.title).font(.title2.bold())
+                LabeledContent("분야", value: displayedEvent.categoryTitle)
+                LabeledContent("일정", value: displayedEvent.time.description)
+                LabeledContent("상태", value: displayedEvent.statusTitle)
+                if let market = displayedEvent.releaseMarket { LabeledContent("공개 지역", value: market) }
+                if let country = displayedEvent.venueCountry { LabeledContent("개최국", value: country) }
+                if !displayedEvent.services.isEmpty { LabeledContent("OTT", value: displayedEvent.services.joined(separator: ", ")) }
+                if !displayedEvent.devices.isEmpty { LabeledContent("기기", value: displayedEvent.devices.joined(separator: ", ")) }
+                LabeledContent("데이터", value: displayedEvent.dataOrigin == "fixture" ? "가상 데이터" : "제공처 반영 데이터")
+                LabeledContent("최종 수정", value: displayedEvent.updatedAt)
                 if let previous = detail?.previousTime { LabeledContent("이전 일정", value: previous.description) }
                 if let detail {
                     Text("출처").font(.headline)
