@@ -1,6 +1,7 @@
 # 다음 작업 순서 · 세 저장소 기준
 
 공통 작업 순서의 원본은 [docs/system/plan.md](system/plan.md)다.
+아래는 전체 계획이며 현재 완료/진행 상태·당장 이어받을 작업은 [status.md](system/status.md)에서 확인한다.
 [iOS 담당 작업](repository-plan.md), [정책 결정 목록](system/policies.md)을 함께 읽는다.
 
 1. 사용자 정책 답변을 기록하고 미정 항목을 유지한다.
@@ -11,6 +12,6 @@
 6. 검증된 버전 조합으로 원격 운영·iOS 배포를 준비한다.
 
 우선 목표는 로컬 PostgreSQL·Prisma·NestJS API와 Simulator/본인 iPhone 연결이다.
-최종 형태는 iPhone + 클라우드 API/DB, Mac verifier로 확정했으며 현재는 1단계 준비 문서까지다. backend 실제 코드, evidence v2, 자동 runner, 실제 권한 격리,
-실제 연동과 원격 배포는 아직 구현하지 않았다.
+최종 형태는 iPhone + 클라우드 API/DB, Mac verifier로 확정했다. backend 로컬 공개 API·DB·가상 파이프라인은 구성했다.
+iOS 연결, evidence v2, 자동 runner, 실제 권한 격리, 실제 제공처 연동과 원격 배포는 아직 구현하지 않았다.
 기술 결정은 각 저장소 ADR, 통합 학습 카탈로그는 verifier/docs/learning을 원본으로 유지한다.
