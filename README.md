@@ -14,7 +14,7 @@ backend는 로컬 PostgreSQL·Prisma·공개 API·가상 수집 및 검토된 OT
 2. GODIEOR scheme과 설치된 iPhone Simulator를 선택해 실행한다.
 3. 서명 없는 빌드 확인: `./scripts/build-ios.sh`.
 
-시뮬레이터의 기본 API는 `http://localhost:3000/v1`이다. 로컬 backend가 실행 중이어야 일정이 표시된다. Xcode Scheme 실행 환경 변수 `GODIEOR_API_BASE_URL`로 주소를 바꿀 수 있다. 실기기는 Mac의 localhost가 아닌 휴대폰에서 접근 가능한 API 주소와 HTTPS 구성이 필요하다. 초기 화면 분야 선택은 임시 상태이며 계정 동기화는 아직 구현하지 않았다.
+시뮬레이터의 기본 API는 `http://localhost:3000/v1`이다. 로컬 backend가 실행 중이어야 일정이 표시된다. 앱은 먼저 `/catalog/options`에서 지원 국가·시간대·OTT 서비스·게임 기기 옵션을 받아 필터 선택과 월간/날짜별/상세 조회에 반영한다. Xcode Scheme 실행 환경 변수 `GODIEOR_API_BASE_URL`로 주소를 바꿀 수 있다. 실기기는 Mac의 localhost가 아닌 휴대폰에서 접근 가능한 API 주소와 HTTPS 구성이 필요하다. 분야/지역/시간대/서비스/기기 선택은 해당 기기의 임시 저장이며 계정 동기화는 아직 구현하지 않았다. 분야를 전부 끄면 API를 요청하지 않는다.
 
 실기기는 Xcode에서 본인 Personal Team을 선택한다. 저장소에 팀 ID나 인증서를 기록하지 않는다.
 iOS 17 이상, SwiftUI, 외부 패키지 없는 시작점을 유지한다. 계정은 Google 연동 방향이며 개인 설정 저장/동기화 범위는 P03 상세 정책에 따라 정한다.
