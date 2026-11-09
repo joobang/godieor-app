@@ -32,4 +32,4 @@
 - 통합 검증 handoff에는 앱·backend base/head SHA와 계약·마이그레이션 digest를 함께 기록한다.
   현재 verifier evidence v1은 앱만 처리하므로 이를 세 저장소 통합 PASS로 표현하지 않는다.
 
-- 2026-11-09 사용자 지시: 앞으로 커밋 메시지는 한글로 작성한다.
+- 2026-11-09 사용자 보완: 커밋은 영문 타입 + 한글 설명으로 작성한다. 예: `feat: 월간 달력 추가`, `chore: 개발 환경 정리`, `test: 날짜 경계 검사 추가`. 세부 형식은 `docs/system/handoff.md`를 따른다.
