@@ -33,3 +33,5 @@
   verifier v1은 앱 전용이며 v2는 전체 조합 binding을 지원한다. 실제 통합runner 실행·승인 없이 세 저장소 통합 PASS로 표현하지 않는다.
 
 - 2026-11-09 사용자 보완: 커밋은 영문 타입 + 한글 설명으로 작성한다. 예: `feat: 월간 달력 추가`, `chore: 개발 환경 정리`, `test: 날짜 경계 검사 추가`. 세부 형식은 `docs/system/handoff.md`를 따른다.
+
+- 2026-11-10 사용자 확정: 전용 macOS 계정 검증방식 폐기. 기존계정의 검토한고정source에서 로컬검사·unsigned iOS빌드 진행, 전용계정로그인/암호를 요구하지 않는다. 현재 실행정책은 verifier/docs/local-verification.md이며 로컬검사와 OS격리/전체제품PASS를 구분한다.
