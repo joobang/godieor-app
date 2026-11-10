@@ -15,3 +15,9 @@
 - 사용자 iPhone프로파일설치/신뢰는미실행. 현재Apple공식안내 https://support.apple.com/en-us/102390 를확인해직접설치후별도SSL/TLS신뢰필요를문서화. 다음은동일Wi-Fi폰Safari health조회이며소유자가직접수행한다.
 - 코드변경없는운용실행확인. 신규독립코드리뷰/독립verdict/통합PASS 없음. 계약manifest8dfc69a8c6a5f9feb91f2d0cf6d661eec16a1aacb8e980b7abe880cd0b1f3b1e, migration29ef8ef0d520f44b6a633e8f017144a3e2b2199189461a88ba99bc296c42f5b9 및acceptance초안불변.
 - 상태: Mac준비완료·기기소유자단계대기, 담당해제. 다음요청은phoneSafari health결과확인후Xcode실기기서명설치/Google로그인·세션복원·설정/찜왕복. 기존서비스는사용자폰연결을위해유지. IP/프로세스생존은다음세션에재확인한다.
+
+## 사용자 iPhone 확인 후속 (2026-11-10)
+
+사용자가안내한폰Safari health에대해“오케이떳다”로응답확인했다. 사용자보고이며에이전트가폰의신뢰설정을직접읽은것은아니다. 기본sandbox CoreDevice조회는0건/지연이었고, 허용환경10초조회에서기존페어링iPhone1개·개발자모드enabled를확인했다. 초기network tunnel은disconnected였으나 device info details 읽기연결은exit0으로성공했다. 디바이스식별자는공개문서에복사하지않는다.
+
+프로젝트에CODE_SIGN_STYLE Automatic이지만DEVELOPMENT_TEAM은없다. 다음은사용자가Xcode에서본인Team을선택하는단계다. 이후실제HTTPS주소를buildoverride한서명빌드·기기설치·Google로그인으로진행한다. 새Applecredential/인증서/프로파일생성이나iPhone설치는이번에실행하지않았다. 기존서비스/키체인설정은변경하지않음.
