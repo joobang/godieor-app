@@ -29,3 +29,7 @@ xcrun swiftc -module-cache-path /private/tmp/godieor-endpoint-cache \
 ```
 
 이 검사는 실제 Google 로그인·iPhone 인증서 신뢰·동일 Wi-Fi 접속을 대신하지 않는다. 기기 신뢰 설정은 기기 소유자가 직접 수행한다.
+
+## APP-AUTH-11 실제 연결 확인
+
+2026-11-10 기존 Mac LAN HTTPS 서비스에서 CA 체인·IP 검증을 유지한 health/options 200, 비로그인 설정/잘못된 Google token 401을 작성자가 확인했다. 기기전달용 공개 CA·지문·실제 현재주소 안내는 Git 제외 `work/iphone/`에 준비한다. 실제 주소는 실행 환경에서 달라지므로 공유 문서의 예시 IP를 실제 IP로 오해하지 않는다. [Apple 공식 수동 인증서 신뢰 안내](https://support.apple.com/en-us/102390)에 따라 iPhone 프로파일 설치 후 SSL/TLS 신뢰를 별도로 켜야 한다. iPhone 기기 소유자가 수행하며 Mac의 신뢰 저장소는 자동 변경하지 않는다.
