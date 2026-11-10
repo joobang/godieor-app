@@ -197,6 +197,8 @@ final class AccountState: ObservableObject {
     @Published var errorText: String?
     private var token: String?
     private var sessionGeneration = 0
+    private var refreshRevision = 0
+    private var settingsMutationRevision = 0
     private var pendingFavorites = [String: UUID]()
     private var favoriteMutationRevision = 0
     private let google = GoogleAuthorization()
@@ -279,13 +281,16 @@ final class AccountState: ObservableObject {
 
     func refresh() async {
         guard let activeToken = token else { return }
+        refreshRevision += 1
+        let currentRefresh = refreshRevision
         let generation = sessionGeneration
+        let settingsRevision = settingsMutationRevision
         let mutationRevision = favoriteMutationRevision
         do {
             let profile: AccountUser = try await request("me", sessionToken: activeToken)
-            guard generation == sessionGeneration, token == activeToken else { return }
+            guard generation == sessionGeneration, token == activeToken, currentRefresh == refreshRevision else { return }
             let remote: AccountSettings = try await request("me/settings", sessionToken: activeToken)
-            guard generation == sessionGeneration, token == activeToken else { return }
+            guard generation == sessionGeneration, token == activeToken, currentRefresh == refreshRevision else { return }
             var allFavorites: [FavoritePage.Item] = []
             // Another device may update favorites while this device is paging.
             // Retry the complete snapshot once on a version conflict.
@@ -297,9 +302,9 @@ final class AccountState: ObservableObject {
                     continue
                 }
             }
-            guard generation == sessionGeneration, token == activeToken else { return }
+            guard generation == sessionGeneration, token == activeToken, currentRefresh == refreshRevision else { return }
             user = profile
-            settings = remote
+            if settingsRevision == settingsMutationRevision { settings = remote }
             // A snapshot started before a favorite write must not undo its newer UI state.
             if mutationRevision == favoriteMutationRevision && pendingFavorites.isEmpty {
                 favoriteEventIDs = Set(allFavorites.filter { $0.targetType == "event" }.map(\.targetId))
@@ -307,7 +312,7 @@ final class AccountState: ObservableObject {
             }
             errorText = nil
         } catch {
-            guard generation == sessionGeneration, token == activeToken else { return }
+            guard generation == sessionGeneration, token == activeToken, currentRefresh == refreshRevision else { return }
             if case AccountFailure.sessionExpired = error { clearLocal() }
             errorText = error.localizedDescription
         }
@@ -335,6 +340,7 @@ final class AccountState: ObservableObject {
     func saveSettings(country: String, timeZone: String, categories: [String], services: [String], devices: [String]) async {
         guard let version = settings?.version, let activeToken = token else { return }
         let generation = sessionGeneration
+        settingsMutationRevision += 1
         busy = true
         defer { busy = false }
         do {
@@ -366,11 +372,14 @@ final class AccountState: ObservableObject {
         let operationID = UUID()
         pendingFavorites[pendingKey] = operationID
         favoriteMutationRevision += 1
+        var succeeded = false
         defer {
             if pendingFavorites[pendingKey] == operationID {
                 pendingFavorites.removeValue(forKey: pendingKey)
                 favoriteMutationRevision += 1
             }
+            // Schedule only after the pending mutation has been released.
+            if succeeded { Task { await self.refresh() } }
         }
         let generation = sessionGeneration
         let saved = type == "event" ? favoriteEventIDs.contains(id) : favoriteContentIDs.contains(id)
@@ -383,8 +392,7 @@ final class AccountState: ObservableObject {
                 if saved { favoriteContentIDs.remove(id) } else { favoriteContentIDs.insert(id) }
             }
             errorText = nil
-            // Reconcile concurrent changes made by another device after this write.
-            Task { await refresh() }
+            succeeded = true
         } catch {
             if generation == sessionGeneration, token == activeToken {
                 errorText = error.localizedDescription
@@ -409,6 +417,8 @@ final class AccountState: ObservableObject {
 
     private func clearLocal() {
         sessionGeneration += 1
+        refreshRevision += 1
+        settingsMutationRevision += 1
         pendingFavorites.removeAll()
         favoriteMutationRevision += 1
         SessionKeychain.remove()
