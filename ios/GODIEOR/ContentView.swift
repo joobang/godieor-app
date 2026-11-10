@@ -10,6 +10,7 @@ struct ContentView: View {
     @AppStorage("temporaryTimeZone") private var storedTimeZone = ""
     @AppStorage("temporaryServices") private var storedServices = ""
     @AppStorage("temporaryDevices") private var storedDevices = ""
+    @AppStorage("temporaryFiltersAccountOwner") private var storedFilterOwner = ""
     @State private var catalogOptions: CatalogOptions?
     @State private var optionsError: String?
     @State private var showingFilters = false
@@ -100,6 +101,11 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showingFilters) { filterSheet }
             .onChange(of: account.settings?.version) { _, _ in applyAccountSettings() }
+            .onChange(of: account.user?.id) { previous, current in
+                // Account settings must not remain in shared device preferences after logout.
+                if previous != nil && previous != current { resetDeviceFilters() }
+                if current != nil { applyAccountSettings() }
+            }
             .task { await initializeAccount() }
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active, account.user != nil else { return }
@@ -116,6 +122,8 @@ struct ContentView: View {
     }
 
     private func initializeAccount() async {
+        // Keychain restoration may fail or return 401; never expose a prior account's filters.
+        if !storedFilterOwner.isEmpty { resetDeviceFilters() }
         await loadOptions()
         await account.restore()
         applyAccountSettings()
@@ -151,12 +159,22 @@ struct ContentView: View {
     }
 
     private func applyAccountSettings() {
-        guard let settings = account.settings else { return }
+        guard let user = account.user, let settings = account.settings else { return }
         storedCountry = settings.country
         storedTimeZone = settings.timeZone
         storedCategories = settings.enabledCategories.joined(separator: ",")
         storedServices = settings.services.joined(separator: ",")
         storedDevices = settings.devices.joined(separator: ",")
+        storedFilterOwner = user.id
+    }
+
+    private func resetDeviceFilters() {
+        storedCategories = "movie,ott"
+        storedCountry = ""
+        storedTimeZone = ""
+        storedServices = ""
+        storedDevices = ""
+        storedFilterOwner = ""
     }
 
     private func saveAccountSettings() async {
