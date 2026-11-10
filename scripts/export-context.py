@@ -17,7 +17,7 @@ SOURCES = {
         "docs/product.md", "docs/system/policies.md", "docs/system/architecture.md",
         "docs/system/plan.md", "docs/ai/workflow.md", "docs/ai/task-template.md",
         "docs/repository-plan.md", "docs/decisions/001-foundation.md",
-        "docs/design/calendar-first.md", "docs/api/contract-reference.json",
+        "docs/design/calendar-first.md", "docs/ai/local-iphone-auth.md", "docs/api/contract-reference.json",
     ),
     "backend": (
         "AGENTS.md", "README.md", "docs/local-development.md",
