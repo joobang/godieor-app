@@ -29,7 +29,7 @@ SOURCES = {
     "verifier": (
         "AGENTS.md", "README.md", "requirements/README.md",
         "docs/contracts/reference.json", "docs/learning/README.md",
-        "docs/evidence-v2.md", "docs/runner.md", "docs/local-verification.md", "requirements/proposals/vfy-01-observation-map.md",
+        "docs/evidence-v2.md", "docs/runner.md", "docs/local-verification.md", "docs/api-checks.md", "requirements/proposals/vfy-01-observation-map.md",
         "reviews/2026-11-09-local-runner.md",
     ),
 }
