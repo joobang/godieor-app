@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var account = AccountState()
     @State private var month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
     @State private var selectedDate: String?
@@ -100,6 +101,13 @@ struct ContentView: View {
             .sheet(isPresented: $showingFilters) { filterSheet }
             .onChange(of: account.settings?.version) { _, _ in applyAccountSettings() }
             .task { await initializeAccount() }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active, account.user != nil else { return }
+                Task {
+                    await account.refresh()
+                    applyAccountSettings()
+                }
+            }
             .task(id: selectionKey) { await loadMonth(selection: selectionKey) }
             .task(id: daySelectionKey) {
                 if let selectedDate { await loadDay(selectedDate, selection: selectionKey) }
