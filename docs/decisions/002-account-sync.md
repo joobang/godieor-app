@@ -13,3 +13,9 @@
 
 - 계정 API의 iPhone `localhost` 기본주소를 제거했다. Debug/Release `GODIEOR_API_BASE_URL` → 앱 Info.plist의 `GODIEORAPIBaseURL`로 주입하며, 테스트 실행 시 `GODIEOR_API_BASE_URL` 프로세스 환경변수로 덮어쓸 수 있다. 계정 API는 HTTPS 주소만 허용한다. Google iOS Client ID와 reversed URL scheme은 기존 빌드 설정을 사용한다. 이 값들은 아직 placeholder라 실 로그인은 되지 않는다.
 - 찜 cursor/version 충돌(409) 때 부분 목록을 버리고 처음부터 최대 한 번 재시도한다. 반복 충돌 시 오류로 남겨 오래된 스냅샷을 사용하지 않는다.
+
+## APP-AUTH-03 · 늦은 응답과 로그아웃 경합 (2026-11-10)
+
+- iOS `AccountState`에 세션 generation과 요청 시작 token 대조를 추가했다. 로그인/로그아웃 사이에 완료된 이전 refresh, 설정 저장, 찜 변경의 응답은 현재 상태를 덮어쓰지 않는다. 연속 조회 및 쓰기 요청의 bearer token도 요청 시작 시점에 고정한다.
+- 로그아웃은 기기의 Keychain/화면 상태를 즉시 지우고, 캡처한 이전 bearer token으로 서버 단일 세션을 폐기한다. 폐기 실패는 현재 세션이 여전히 로그아웃 상태일 때만 안내한다. 서버 폐기 실패 시 이전 세션은 만료 전까지 서버에 남을 수 있으므로 최종 인증 통합 검증에서 확인할 위험으로 기록한다.
+- unsigned iOS 컴파일만 확인했으며 지연 네트워크/실제 Google 로그인 UI 계측 테스트를 수행한 것은 아니다.

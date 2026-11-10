@@ -196,6 +196,7 @@ final class AccountState: ObservableObject {
     @Published private(set) var busy = false
     @Published var errorText: String?
     private var token: String?
+    private var sessionGeneration = 0
     private let google = GoogleAuthorization()
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
@@ -212,7 +213,7 @@ final class AccountState: ObservableObject {
         return url
     }
 
-    private func request<T: Decodable>(_ path: String, method: String = "GET", body: Data? = nil, authenticated: Bool = true, query: [URLQueryItem] = []) async throws -> T {
+    private func request<T: Decodable>(_ path: String, method: String = "GET", body: Data? = nil, authenticated: Bool = true, sessionToken: String? = nil, query: [URLQueryItem] = []) async throws -> T {
         guard let baseURL else { throw AccountFailure.apiNotConfigured }
         var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
         components.queryItems = query.isEmpty ? nil : query
@@ -222,7 +223,7 @@ final class AccountState: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if body != nil { request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         if authenticated {
-            guard let token else { throw AccountFailure.sessionExpired }
+            guard let token = sessionToken ?? token else { throw AccountFailure.sessionExpired }
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         request.httpBody = body
@@ -233,11 +234,11 @@ final class AccountState: ObservableObject {
         return try decoder.decode(T.self, from: data)
     }
 
-    private func update(_ path: String, method: String) async throws {
+    private func update(_ path: String, method: String, sessionToken: String? = nil) async throws {
         guard let baseURL else { throw AccountFailure.apiNotConfigured }
         var request = URLRequest(url: baseURL.appending(path: path))
         request.httpMethod = method
-        guard let token else { throw AccountFailure.sessionExpired }
+        guard let token = sessionToken ?? token else { throw AccountFailure.sessionExpired }
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         let (_, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -247,6 +248,7 @@ final class AccountState: ObservableObject {
 
     func restore() async {
         guard let token = SessionKeychain.load() else { return }
+        sessionGeneration += 1
         self.token = token
         await refresh()
     }
@@ -255,47 +257,57 @@ final class AccountState: ObservableObject {
         guard !busy else { return }
         busy = true
         defer { busy = false }
+        let generation = sessionGeneration
         do {
             let idToken = try await google.idToken()
+            guard generation == sessionGeneration else { return }
             let body = try JSONSerialization.data(withJSONObject: ["idToken": idToken])
             let session: AccountSession = try await request("auth/google", method: "POST", body: body, authenticated: false)
+            guard generation == sessionGeneration else { return }
             try SessionKeychain.save(session.accessToken)
+            sessionGeneration += 1
             token = session.accessToken
             user = session.user
             errorText = nil
             await refresh()
         } catch {
-            errorText = error.localizedDescription
+            if generation == sessionGeneration { errorText = error.localizedDescription }
         }
     }
 
     func refresh() async {
+        guard let activeToken = token else { return }
+        let generation = sessionGeneration
         do {
-            let profile: AccountUser = try await request("me")
-            let remote: AccountSettings = try await request("me/settings")
+            let profile: AccountUser = try await request("me", sessionToken: activeToken)
+            guard generation == sessionGeneration, token == activeToken else { return }
+            let remote: AccountSettings = try await request("me/settings", sessionToken: activeToken)
+            guard generation == sessionGeneration, token == activeToken else { return }
             var allFavorites: [FavoritePage.Item] = []
             // Another device may update favorites while this device is paging.
             // Retry the complete snapshot once on a version conflict.
             for attempt in 0..<2 {
                 do {
-                    allFavorites = try await loadFavoriteSnapshot()
+                    allFavorites = try await loadFavoriteSnapshot(sessionToken: activeToken)
                     break
                 } catch AccountFailure.invalidResponse(409) where attempt == 0 {
                     continue
                 }
             }
+            guard generation == sessionGeneration, token == activeToken else { return }
             user = profile
             settings = remote
             favoriteEventIDs = Set(allFavorites.filter { $0.targetType == "event" }.map(\.targetId))
             favoriteContentIDs = Set(allFavorites.filter { $0.targetType == "content" }.map(\.targetId))
             errorText = nil
         } catch {
+            guard generation == sessionGeneration, token == activeToken else { return }
             if case AccountFailure.sessionExpired = error { clearLocal() }
             errorText = error.localizedDescription
         }
     }
 
-    private func loadFavoriteSnapshot() async throws -> [FavoritePage.Item] {
+    private func loadFavoriteSnapshot(sessionToken: String) async throws -> [FavoritePage.Item] {
         var items: [FavoritePage.Item] = []
         var cursor: String?
         var version: String?
@@ -304,7 +316,7 @@ final class AccountState: ObservableObject {
             var query = [URLQueryItem(name: "limit", value: "100")]
             if let cursor { query.append(.init(name: "cursor", value: cursor)) }
             if let version { query.append(.init(name: "favoritesVersion", value: version)) }
-            let page: FavoritePage = try await request("me/favorites", query: query)
+            let page: FavoritePage = try await request("me/favorites", sessionToken: sessionToken, query: query)
             if let version, page.favoritesVersion != version { throw AccountFailure.invalidResponse(409) }
             version = page.favoritesVersion
             items.append(contentsOf: page.items)
@@ -315,7 +327,8 @@ final class AccountState: ObservableObject {
     }
 
     func saveSettings(country: String, timeZone: String, categories: [String], services: [String], devices: [String]) async {
-        guard let version = settings?.version else { return }
+        guard let version = settings?.version, let activeToken = token else { return }
+        let generation = sessionGeneration
         busy = true
         defer { busy = false }
         do {
@@ -325,22 +338,28 @@ final class AccountState: ObservableObject {
                 "view": settings?.view ?? "calendar"
             ]
             let body = try JSONSerialization.data(withJSONObject: payload)
-            let updated: AccountSettings = try await request("me/settings", method: "PUT", body: body)
+            let updated: AccountSettings = try await request("me/settings", method: "PUT", body: body, sessionToken: activeToken)
+            guard generation == sessionGeneration, token == activeToken else { return }
             settings = updated
             errorText = nil
         } catch {
+            guard generation == sessionGeneration, token == activeToken else { return }
             let message = error.localizedDescription
             // Reload the latest version but preserve the conflict message for the user.
             await refresh()
-            errorText = message + " 계정 설정을 다시 확인한 뒤 저장해 주세요."
+            if generation == sessionGeneration, token == activeToken {
+                errorText = message + " 계정 설정을 다시 확인한 뒤 저장해 주세요."
+            }
         }
     }
 
     func toggleFavorite(type: String, id: String) async {
-        guard user != nil, type == "event" || type == "content" else { return }
+        guard user != nil, let activeToken = token, type == "event" || type == "content" else { return }
+        let generation = sessionGeneration
         let saved = type == "event" ? favoriteEventIDs.contains(id) : favoriteContentIDs.contains(id)
         do {
-            try await update("me/favorites/\(type == "event" ? "events" : "contents")/\(id)", method: saved ? "DELETE" : "PUT")
+            try await update("me/favorites/\(type == "event" ? "events" : "contents")/\(id)", method: saved ? "DELETE" : "PUT", sessionToken: activeToken)
+            guard generation == sessionGeneration, token == activeToken else { return }
             if type == "event" {
                 if saved { favoriteEventIDs.remove(id) } else { favoriteEventIDs.insert(id) }
             } else {
@@ -348,19 +367,29 @@ final class AccountState: ObservableObject {
             }
             errorText = nil
         } catch {
-            errorText = error.localizedDescription
+            if generation == sessionGeneration, token == activeToken {
+                errorText = error.localizedDescription
+            }
         }
     }
 
     func signOut() async {
-        if token != nil {
-            do { try await update("auth/session", method: "DELETE") }
-            catch { errorText = "서버에서 로그아웃을 확인하지 못했습니다: \(error.localizedDescription)" }
-        }
+        let departingToken = token
         clearLocal()
+        errorText = nil
+        let generation = sessionGeneration
+        if let departingToken {
+            do { try await update("auth/session", method: "DELETE", sessionToken: departingToken) }
+            catch {
+                if generation == sessionGeneration {
+                    errorText = "서버에서 로그아웃을 확인하지 못했습니다: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 
     private func clearLocal() {
+        sessionGeneration += 1
         SessionKeychain.remove()
         token = nil
         user = nil
