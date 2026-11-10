@@ -143,6 +143,21 @@ struct ContentView: View {
                     }
                     Button("현재 필터 저장") { Task { await saveAccountSettings() } }
                 }.font(.caption).disabled(account.busy)
+                HStack(spacing: 4) {
+                    if account.isSyncing {
+                        ProgressView().controlSize(.mini)
+                        Text("계정 설정·찜 동기화 중")
+                    } else if account.syncFailed {
+                        Label("최근 동기화 실패", systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                    } else if let lastSyncedAt = account.lastSyncedAt {
+                        Text("마지막 서버 동기화: \(lastSyncedAt.formatted(date: .abbreviated, time: .shortened))")
+                    } else {
+                        Text("계정 동기화 확인 전")
+                    }
+                }.font(.caption2).foregroundStyle(.secondary)
+                Text("현재 필터 변경은 ‘현재 필터 저장’을 눌러야 계정에 반영돼요.")
+                    .font(.caption2).foregroundStyle(.secondary)
             } else {
                 HStack {
                     Text("로그인하면 설정과 찜을 계정에 저장할 수 있어요.").font(.caption)

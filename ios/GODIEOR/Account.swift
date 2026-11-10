@@ -194,6 +194,9 @@ final class AccountState: ObservableObject {
     @Published private(set) var favoriteEventIDs = Set<String>()
     @Published private(set) var favoriteContentIDs = Set<String>()
     @Published private(set) var busy = false
+    @Published private(set) var isSyncing = false
+    @Published private(set) var lastSyncedAt: Date?
+    @Published private(set) var syncFailed = false
     @Published var errorText: String?
     private var token: String?
     private var sessionGeneration = 0
@@ -264,6 +267,8 @@ final class AccountState: ObservableObject {
             sessionGeneration += 1
             token = session.accessToken
             user = session.user
+            lastSyncedAt = nil
+            syncFailed = false
             errorText = nil
             await refresh()
         } catch {
@@ -274,6 +279,8 @@ final class AccountState: ObservableObject {
     func refresh() async {
         guard let activeToken = token else { return }
         refreshRevision += 1
+        isSyncing = true
+        syncFailed = false
         let currentRefresh = refreshRevision
         let generation = sessionGeneration
         let settingsRevision = settingsMutationRevision
@@ -296,15 +303,21 @@ final class AccountState: ObservableObject {
             }
             guard generation == sessionGeneration, token == activeToken, currentRefresh == refreshRevision else { return }
             user = profile
-            if settingsRevision == settingsMutationRevision { settings = remote }
+            let settingsUnchanged = settingsRevision == settingsMutationRevision
+            if settingsUnchanged { settings = remote }
             // A snapshot started before a favorite write must not undo its newer UI state.
-            if mutationRevision == favoriteMutationRevision && pendingFavorites.isEmpty {
+            let favoritesUnchanged = mutationRevision == favoriteMutationRevision && pendingFavorites.isEmpty
+            if favoritesUnchanged {
                 favoriteEventIDs = Set(allFavorites.filter { $0.targetType == "event" }.map(\.targetId))
                 favoriteContentIDs = Set(allFavorites.filter { $0.targetType == "content" }.map(\.targetId))
             }
+            isSyncing = false
+            if settingsUnchanged && favoritesUnchanged { lastSyncedAt = Date() }
             errorText = nil
         } catch {
             guard generation == sessionGeneration, token == activeToken, currentRefresh == refreshRevision else { return }
+            isSyncing = false
+            syncFailed = true
             if case AccountFailure.sessionExpired = error { clearLocal() }
             errorText = error.localizedDescription
         }
@@ -345,6 +358,7 @@ final class AccountState: ObservableObject {
             let updated: AccountSettings = try await request("me/settings", method: "PUT", body: body, sessionToken: activeToken)
             guard generation == sessionGeneration, token == activeToken else { return }
             settings = updated
+            // The server acknowledged this settings write; favorites may still need refreshing.
             errorText = nil
         } catch {
             guard generation == sessionGeneration, token == activeToken else { return }
@@ -423,6 +437,9 @@ final class AccountState: ObservableObject {
         token = nil
         user = nil
         settings = nil
+        isSyncing = false
+        lastSyncedAt = nil
+        syncFailed = false
         favoriteEventIDs.removeAll()
         favoriteContentIDs.removeAll()
     }
