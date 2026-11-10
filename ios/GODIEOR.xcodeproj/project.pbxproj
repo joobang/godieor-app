@@ -55,9 +55,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GODIEOR/Info.plist;
-				GODIEOR_GOOGLE_CLIENT_ID = YOUR_GOOGLE_IOS_CLIENT_ID;
+				GODIEOR_GOOGLE_CLIENT_ID = 988873532782-brpdi7ikj56d4k4sg4fkq80v78ccglep.apps.googleusercontent.com;
 				GODIEOR_API_BASE_URL = "https://YOUR_BACKEND_HOST/v1";
-				GODIEOR_GOOGLE_CALLBACK_SCHEME = YOUR_REVERSED_CLIENT_ID;
+				GODIEOR_GOOGLE_CALLBACK_SCHEME = com.googleusercontent.apps.988873532782-brpdi7ikj56d4k4sg4fkq80v78ccglep;
 				INFOPLIST_KEY_CFBundleDisplayName = "고디어";
 				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
@@ -81,9 +81,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GODIEOR/Info.plist;
-				GODIEOR_GOOGLE_CLIENT_ID = YOUR_GOOGLE_IOS_CLIENT_ID;
+				GODIEOR_GOOGLE_CLIENT_ID = 988873532782-brpdi7ikj56d4k4sg4fkq80v78ccglep.apps.googleusercontent.com;
 				GODIEOR_API_BASE_URL = "https://YOUR_BACKEND_HOST/v1";
-				GODIEOR_GOOGLE_CALLBACK_SCHEME = YOUR_REVERSED_CLIENT_ID;
+				GODIEOR_GOOGLE_CALLBACK_SCHEME = com.googleusercontent.apps.988873532782-brpdi7ikj56d4k4sg4fkq80v78ccglep;
 				INFOPLIST_KEY_CFBundleDisplayName = "고디어";
 				INFOPLIST_KEY_NSAppTransportSecurity_NSAllowsLocalNetworking = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
