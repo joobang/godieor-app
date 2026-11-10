@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var account = AccountState()
     @State private var month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
     @State private var selectedDate: String?
     @AppStorage("temporaryVisibleCategories") private var storedCategories = "movie,ott"
@@ -46,6 +47,9 @@ struct ContentView: View {
         guard let filters else { return monthKey + ":options-unavailable" }
         return ([monthKey, filters.country, filters.timeZone] + filters.categories + ["services"] + filters.services + ["devices"] + filters.devices).joined(separator: ":")
     }
+    private var daySelectionKey: String {
+        [selectedDate ?? "", selectionKey, calendar?.catalogRevision ?? ""].joined(separator: ":")
+    }
     private var days: [String: ReleaseDay] { Dictionary(uniqueKeysWithValues: (calendar?.days ?? []).map { ($0.date, $0) }) }
 
     var body: some View {
@@ -53,6 +57,7 @@ struct ContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("곧이어, 만날 즐거움").font(.title2.bold())
+                    accountPanel
                     HStack {
                         Button { moveMonth(-1) } label: { Image(systemName: "chevron.left") }
                             .accessibilityLabel("이전 달")
@@ -78,12 +83,12 @@ struct ContentView: View {
                         }
                     }
                     HStack {
-                        Text("\(filters?.country ?? "지역 확인 중") · \(filters?.timeZone ?? "시간대 확인 중") · 비로그인 공개 일정")
+                        Text("\(filters?.country ?? "지역 확인 중") · \(filters?.timeZone ?? "시간대 확인 중") · 공개 일정")
                             .font(.caption).foregroundStyle(.secondary)
                         Spacer()
                         Button("필터") { showingFilters = true }.disabled(catalogOptions == nil)
                     }
-                    Text("필터 설정은 이 기기에 임시 저장돼요.")
+                    Text(account.user == nil ? "필터 설정은 이 기기에 임시 저장돼요." : "기기 설정을 계정에 저장하거나 계정 설정을 다시 불러올 수 있어요.")
                         .font(.caption).foregroundStyle(.secondary)
                     calendarContent
                 }.padding(16)
@@ -93,12 +98,65 @@ struct ContentView: View {
                 if let filters { NavigationStack { EventDetailView(event: event, filters: filters, api: api) } }
             }
             .sheet(isPresented: $showingFilters) { filterSheet }
-            .task { await loadOptions() }
+            .onChange(of: account.settings?.version) { _, _ in applyAccountSettings() }
+            .task { await initializeAccount() }
             .task(id: selectionKey) { await loadMonth(selection: selectionKey) }
-            .task(id: (selectedDate ?? "") + ":" + selectionKey + ":" + (calendar?.catalogRevision ?? "")) {
+            .task(id: daySelectionKey) {
                 if let selectedDate { await loadDay(selectedDate, selection: selectionKey) }
             }
         }
+    }
+
+    private func initializeAccount() async {
+        await loadOptions()
+        await account.restore()
+        applyAccountSettings()
+    }
+
+    private var accountPanel: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let user = account.user {
+                HStack {
+                    Text("Google 계정 · \(user.displayName ?? "로그인됨")").font(.caption)
+                    Spacer()
+                    Button("로그아웃") { Task { await account.signOut() } }.font(.caption)
+                }
+                HStack {
+                    Button("계정 설정 다시 불러오기") {
+                        Task { await account.refresh(); applyAccountSettings() }
+                    }
+                    Button("현재 필터 저장") { Task { await saveAccountSettings() } }
+                }.font(.caption).disabled(account.busy)
+            } else {
+                HStack {
+                    Text("로그인하면 설정과 찜을 계정에 저장할 수 있어요.").font(.caption)
+                    Spacer()
+                    Button("Google 로그인") {
+                        Task { await account.signIn(); applyAccountSettings() }
+                    }.disabled(account.busy)
+                }
+            }
+            if let error = account.errorText {
+                Text(error).font(.caption).foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func applyAccountSettings() {
+        guard let settings = account.settings else { return }
+        storedCountry = settings.country
+        storedTimeZone = settings.timeZone
+        storedCategories = settings.enabledCategories.joined(separator: ",")
+        storedServices = settings.services.joined(separator: ",")
+        storedDevices = settings.devices.joined(separator: ",")
+    }
+
+    private func saveAccountSettings() async {
+        guard let filters else { return }
+        await account.saveSettings(
+            country: filters.country, timeZone: filters.timeZone,
+            categories: categories, services: filters.services, devices: filters.devices
+        )
     }
 
     private var calendarContent: some View {
@@ -159,7 +217,11 @@ struct ContentView: View {
                             Toggle(device, isOn: storedSetBinding(device, key: "devices"))
                         }
                     }
-                    Text("OTT 서비스 필터는 OTT에, 게임 기기 필터는 게임에 적용됩니다. 계정 동기화 전까지 이 기기에만 저장됩니다.")
+                    if account.user != nil {
+                        Button("현재 필터를 계정에 저장") { Task { await saveAccountSettings() } }
+                            .disabled(account.busy)
+                    }
+                    Text("OTT 서비스 필터는 OTT에, 게임 기기 필터는 게임에 적용됩니다. 로그인 후 계정에 저장할 수 있습니다.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -249,6 +311,7 @@ struct ContentView: View {
                 Text("확인된 일정이 없어요.").foregroundStyle(.secondary)
             }
             ForEach(events) { item in
+                HStack(spacing: 8) {
                 Button { selectedEvent = item } label: {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
@@ -263,6 +326,21 @@ struct ContentView: View {
                     .padding(12)
                     .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
                 }.buttonStyle(.plain)
+                if account.user != nil {
+                    Button { Task { await account.toggleFavorite(type: "event", id: item.id) } } label: {
+                        Image(systemName: account.favoriteEventIDs.contains(item.id) ? "heart.fill" : "heart")
+                            .foregroundStyle(account.favoriteEventIDs.contains(item.id) ? .red : .secondary)
+                    }
+                    .accessibilityLabel(account.favoriteEventIDs.contains(item.id) ? "일정 찜 해제" : "일정 찜")
+                    if let contentId = item.contentId {
+                        Button { Task { await account.toggleFavorite(type: "content", id: contentId) } } label: {
+                            Image(systemName: account.favoriteContentIDs.contains(contentId) ? "bookmark.fill" : "bookmark")
+                                .foregroundStyle(account.favoriteContentIDs.contains(contentId) ? .blue : .secondary)
+                        }
+                        .accessibilityLabel(account.favoriteContentIDs.contains(contentId) ? "작품 찜 해제" : "작품 찜")
+                    }
+                }
+                }
             }
         }
     }
