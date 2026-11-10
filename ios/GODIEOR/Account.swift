@@ -356,6 +356,11 @@ final class AccountState: ObservableObject {
             errorText = nil
         } catch {
             guard generation == sessionGeneration, token == activeToken else { return }
+            if case AccountFailure.sessionExpired = error {
+                clearLocal()
+                errorText = error.localizedDescription
+                return
+            }
             let message = error.localizedDescription
             // Reload the latest version but preserve the conflict message for the user.
             await refresh()
@@ -395,6 +400,7 @@ final class AccountState: ObservableObject {
             succeeded = true
         } catch {
             if generation == sessionGeneration, token == activeToken {
+                if case AccountFailure.sessionExpired = error { clearLocal() }
                 errorText = error.localizedDescription
             }
         }
