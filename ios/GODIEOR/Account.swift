@@ -37,11 +37,12 @@ struct FavoritePage: Decodable {
 }
 
 private enum AccountFailure: LocalizedError {
-    case notConfigured, invalidCallback, oauthFailure, sessionExpired, invalidResponse(Int)
+    case notConfigured, apiNotConfigured, invalidCallback, oauthFailure, sessionExpired, invalidResponse(Int)
 
     var errorDescription: String? {
         switch self {
         case .notConfigured: "Google OAuth 클라이언트 설정이 필요합니다."
+        case .apiNotConfigured: "계정 서버 HTTPS 주소를 설정해 주세요."
         case .invalidCallback: "Google 인증 결과를 확인하지 못했습니다."
         case .oauthFailure: "Google 로그인을 완료하지 못했습니다."
         case .sessionExpired: "로그인 세션이 만료되었습니다. 다시 로그인해 주세요."
@@ -201,11 +202,18 @@ final class AccountState: ObservableObject {
         d.dateDecodingStrategy = .iso8601
         return d
     }()
-    private var baseURL: URL {
-        URL(string: ProcessInfo.processInfo.environment["GODIEOR_API_BASE_URL"] ?? "http://localhost:3000/v1")!
+    private var baseURL: URL? {
+        let configured = ProcessInfo.processInfo.environment["GODIEOR_API_BASE_URL"]
+            ?? (Bundle.main.object(forInfoDictionaryKey: "GODIEORAPIBaseURL") as? String)
+        guard let configured, !configured.contains("YOUR_"),
+              let url = URL(string: configured), url.scheme == "https", url.host != nil,
+              url.user == nil, url.password == nil, url.query == nil, url.fragment == nil
+        else { return nil }
+        return url
     }
 
     private func request<T: Decodable>(_ path: String, method: String = "GET", body: Data? = nil, authenticated: Bool = true, query: [URLQueryItem] = []) async throws -> T {
+        guard let baseURL else { throw AccountFailure.apiNotConfigured }
         var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false)!
         components.queryItems = query.isEmpty ? nil : query
         var request = URLRequest(url: components.url!)
@@ -226,6 +234,7 @@ final class AccountState: ObservableObject {
     }
 
     private func update(_ path: String, method: String) async throws {
+        guard let baseURL else { throw AccountFailure.apiNotConfigured }
         var request = URLRequest(url: baseURL.appending(path: path))
         request.httpMethod = method
         guard let token else { throw AccountFailure.sessionExpired }
@@ -265,20 +274,16 @@ final class AccountState: ObservableObject {
             let profile: AccountUser = try await request("me")
             let remote: AccountSettings = try await request("me/settings")
             var allFavorites: [FavoritePage.Item] = []
-            var cursor: String?
-            var version: String?
-            var seen = Set<String>()
-            repeat {
-                var query = [URLQueryItem(name: "limit", value: "100")]
-                if let cursor { query.append(.init(name: "cursor", value: cursor)) }
-                if let version { query.append(.init(name: "favoritesVersion", value: version)) }
-                let page: FavoritePage = try await request("me/favorites", query: query)
-                if let version, page.favoritesVersion != version { throw AccountFailure.invalidResponse(409) }
-                version = page.favoritesVersion
-                allFavorites.append(contentsOf: page.items)
-                cursor = page.nextCursor
-                if let cursor, !seen.insert(cursor).inserted { throw AccountFailure.invalidResponse(409) }
-            } while cursor != nil
+            // Another device may update favorites while this device is paging.
+            // Retry the complete snapshot once on a version conflict.
+            for attempt in 0..<2 {
+                do {
+                    allFavorites = try await loadFavoriteSnapshot()
+                    break
+                } catch AccountFailure.invalidResponse(409) where attempt == 0 {
+                    continue
+                }
+            }
             user = profile
             settings = remote
             favoriteEventIDs = Set(allFavorites.filter { $0.targetType == "event" }.map(\.targetId))
@@ -288,6 +293,25 @@ final class AccountState: ObservableObject {
             if case AccountFailure.sessionExpired = error { clearLocal() }
             errorText = error.localizedDescription
         }
+    }
+
+    private func loadFavoriteSnapshot() async throws -> [FavoritePage.Item] {
+        var items: [FavoritePage.Item] = []
+        var cursor: String?
+        var version: String?
+        var seen = Set<String>()
+        repeat {
+            var query = [URLQueryItem(name: "limit", value: "100")]
+            if let cursor { query.append(.init(name: "cursor", value: cursor)) }
+            if let version { query.append(.init(name: "favoritesVersion", value: version)) }
+            let page: FavoritePage = try await request("me/favorites", query: query)
+            if let version, page.favoritesVersion != version { throw AccountFailure.invalidResponse(409) }
+            version = page.favoritesVersion
+            items.append(contentsOf: page.items)
+            cursor = page.nextCursor
+            if let cursor, !seen.insert(cursor).inserted { throw AccountFailure.invalidResponse(409) }
+        } while cursor != nil
+        return items
     }
 
     func saveSettings(country: String, timeZone: String, categories: [String], services: [String], devices: [String]) async {

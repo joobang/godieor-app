@@ -8,3 +8,8 @@
 - 작품 찜/일정 찜은 사용자+대상 유일, 동일 PUT/DELETE 재호출 멱등, 변경 시 favorites_version 증가, 목록은 user/version/limit에 결속된 15분 HMAC 커서를 사용한다. 페이지 사이 변경은 409로 처음부터 다시 조회한다.
 - 외부 제공처 비밀은 서버에서 관리한다. Google OAuth 클라이언트 ID는 공개 식별자이며 실제 설정은 앱 빌드/백엔드 환경에 별도로 주입한다. 실제 Google 자격증명·HTTPS backend 없이는 end-to-end 검증을 주장하지 않는다.
 - API 계약 0.1.0-draft.2 및 migration digest 변경 없음. 전용 Mac 계정 검증 방식 폐기 상태.
+
+## APP-AUTH-02 (2026-11-10)
+
+- 계정 API의 iPhone `localhost` 기본주소를 제거했다. Debug/Release `GODIEOR_API_BASE_URL` → 앱 Info.plist의 `GODIEORAPIBaseURL`로 주입하며, 테스트 실행 시 `GODIEOR_API_BASE_URL` 프로세스 환경변수로 덮어쓸 수 있다. 계정 API는 HTTPS 주소만 허용한다. Google iOS Client ID와 reversed URL scheme은 기존 빌드 설정을 사용한다. 이 값들은 아직 placeholder라 실 로그인은 되지 않는다.
+- 찜 cursor/version 충돌(409) 때 부분 목록을 버리고 처음부터 최대 한 번 재시도한다. 반복 충돌 시 오류로 남겨 오래된 스냅샷을 사용하지 않는다.
