@@ -12,3 +12,20 @@
 개발 CA는 30일, 서버 인증서는 14일 뒤 만료된다. Mac IP가 변경되면 새 IP로 실행해 새 CA를 설치한다. 확인 후 iPhone에서 개발 CA의 신뢰와 설치 프로파일을 제거하고 Mac 프록시를 종료한다. 스크립트는 HTTP 본문·Authorization 헤더를 기록하지 않으며 요청을 로컬 API로만 전달한다. 인증서·키는 `${TMPDIR}` 아래에 생성된다.
 
 주의: Xcode Run 환경변수를 이용하는 경우 `GODIEOR_API_BASE_URL`이 실제 앱 프로세스에 전달되는지 확인해야 한다. 일반적인 테스트/배포 빌드에는 Xcode build setting으로 주입해야 한다. 실 Google 인증, iPhone 실기기 동기화와 독립 verifier PASS는 이 문서를 작성했다고 달성되지 않는다.
+
+## 공개 일정·계정 API 주소 일치 (APP-AUTH-10)
+
+두 API 모두 `GODIEOR_API_BASE_URL` 실행 환경변수 → Info.plist `GODIEORAPIBaseURL`(동일 Xcode build setting) 순서로 읽는다. 설정한 HTTPS 주소는 달력·상세·로그인·설정·찜에 공통 적용된다. 앱 아이콘으로 실행할 때에도 유지하려면 Run 환경변수 대신 빌드 설정으로 주입해야 한다.
+
+주소 미설정/placeholder 상태의 iPhone에서는 localhost로 연결하지 않고 설정 오류를 표시한다. Simulator 공개 조회만 개발용 loopback HTTP fallback을 유지하며, 계정 토큰 요청은 Simulator에서도 HTTPS가 필요하다. 잘못된 명시적 환경변수는 bundle/localhost로 조용히 fallback하지 않는다. user/password/query/fragment가 섞인 API base URL은 거부한다.
+
+로컬 회귀 검사:
+
+```sh
+xcrun swiftc -module-cache-path /private/tmp/godieor-endpoint-cache \
+  -parse-as-library ios/GODIEOR/PublicAPI.swift tests/APIEndpointChecks.swift \
+  -o /private/tmp/godieor-endpoint-checks
+/private/tmp/godieor-endpoint-checks
+```
+
+이 검사는 실제 Google 로그인·iPhone 인증서 신뢰·동일 Wi-Fi 접속을 대신하지 않는다. 기기 신뢰 설정은 기기 소유자가 직접 수행한다.

@@ -207,15 +207,7 @@ final class AccountState: ObservableObject {
         d.dateDecodingStrategy = .iso8601
         return d
     }()
-    private var baseURL: URL? {
-        let configured = ProcessInfo.processInfo.environment["GODIEOR_API_BASE_URL"]
-            ?? (Bundle.main.object(forInfoDictionaryKey: "GODIEORAPIBaseURL") as? String)
-        guard let configured, !configured.contains("YOUR_"),
-              let url = URL(string: configured), url.scheme == "https", url.host != nil,
-              url.user == nil, url.password == nil, url.query == nil, url.fragment == nil
-        else { return nil }
-        return url
-    }
+    private var baseURL: URL? { APIEndpointConfiguration.current() }
 
     private func request<T: Decodable>(_ path: String, method: String = "GET", body: Data? = nil, authenticated: Bool = true, sessionToken: String? = nil, query: [URLQueryItem] = []) async throws -> T {
         guard let baseURL else { throw AccountFailure.apiNotConfigured }

@@ -143,19 +143,54 @@ enum PublicAPIError: LocalizedError {
     }
 }
 
+enum APIEndpointConfiguration {
+    // Both clients use the same HTTPS configuration. Loopback HTTP is only
+    // available to public browsing in Simulator, never account credentials.
+    static func resolve(environment: [String: String], bundleValue: String?, allowSimulatorLoopback: Bool) -> URL? {
+        let override = environment["GODIEOR_API_BASE_URL"]
+        let raw = override ?? bundleValue
+        let missing = raw == nil || (override == nil && (raw?.contains("YOUR_") == true || raw?.hasPrefix("$(") == true))
+        if missing {
+            return allowSimulatorLoopback ? URL(string: "http://localhost:3000/v1") : nil
+        }
+        guard let raw, !raw.isEmpty, raw == raw.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.contains("YOUR_"), !raw.contains("$("),
+              let components = URLComponents(string: raw), let host = components.host, !host.isEmpty,
+              components.user == nil, components.password == nil,
+              components.query == nil, components.fragment == nil,
+              let url = components.url else { return nil }
+        if components.scheme?.lowercased() == "https" { return url }
+        if allowSimulatorLoopback && components.scheme?.lowercased() == "http" && ["localhost", "127.0.0.1", "[::1]", "::1"].contains(host.lowercased()) { return url }
+        return nil
+    }
+
+    static func current(allowSimulatorLoopback: Bool = false) -> URL? {
+        resolve(environment: ProcessInfo.processInfo.environment,
+                bundleValue: Bundle.main.object(forInfoDictionaryKey: "GODIEORAPIBaseURL") as? String,
+                allowSimulatorLoopback: allowSimulatorLoopback)
+    }
+
+    static var publicURL: URL? {
+        #if targetEnvironment(simulator)
+        current(allowSimulatorLoopback: true)
+        #else
+        current()
+        #endif
+    }
+}
+
 struct PublicAPI {
-    // Simulator default. For a real phone set GODIEOR_API_BASE_URL to a reachable HTTPS endpoint.
-    private let baseURL: URL
+    // Shared environment/bundle HTTPS setting; only Simulator public browsing permits loopback HTTP.
+    private let baseURL: URL?
     private let session: URLSession
 
     init(baseURL: URL? = nil, session: URLSession = .shared) {
-        let configured = ProcessInfo.processInfo.environment["GODIEOR_API_BASE_URL"]
-        self.baseURL = baseURL ?? URL(string: configured ?? "http://localhost:3000/v1")!
+        self.baseURL = baseURL ?? APIEndpointConfiguration.publicURL
         self.session = session
     }
 
     private func get<T: Decodable>(_ path: String, query: [URLQueryItem] = []) async throws -> T {
-        guard var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false) else {
+        guard let baseURL, var components = URLComponents(url: baseURL.appending(path: path), resolvingAgainstBaseURL: false) else {
             throw PublicAPIError.invalidURL
         }
         components.queryItems = query.isEmpty ? nil : query
