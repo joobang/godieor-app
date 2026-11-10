@@ -36,6 +36,7 @@ struct PublicFilters {
 struct ReleaseEvent: Decodable, Identifiable {
     let id: String
     let kind: String
+    let ottCategory: String?
     let title: String
     let contentId: String?
     let status: String
@@ -50,7 +51,14 @@ struct ReleaseEvent: Decodable, Identifiable {
     var categoryTitle: String {
         switch kind {
         case "theatrical_release": "영화"
-        case "ott_season_premiere": "OTT"
+        case "ott_season_premiere":
+            switch ottCategory {
+            case "movie": "OTT · 영화"
+            case "original_series": "OTT · 오리지널 시리즈"
+            case "variety": "OTT · 예능"
+            case "other": "OTT · 기타"
+            default: "OTT · 시리즈"
+            }
         case "game_release": "게임"
         case "epl_match": "EPL"
         default: kind
