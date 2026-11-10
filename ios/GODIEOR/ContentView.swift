@@ -225,12 +225,6 @@ struct ContentView: View {
                 if calendar.freshness.contains(where: { $0.coverage != "available" }) {
                     Text("제공처 일정이 일부만 수집되었을 수 있어요.").font(.caption).foregroundStyle(.secondary)
                 }
-                ForEach(calendar.freshness, id: \.providerKey) { source in
-                    if source.lastAttemptStatus != "succeeded" || source.coverage != "available" {
-                        Text("\(source.providerKey): \(source.lastAttemptStatus) · 마지막 성공 \(source.lastSuccessfulAt ?? "확인되지 않음")")
-                            .font(.caption2).foregroundStyle(.secondary)
-                    }
-                }
             }
             if let selectedDate { dayList(selectedDate) }
         }
@@ -368,18 +362,20 @@ struct ContentView: View {
                     .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
                 }.buttonStyle(.plain)
                 if account.user != nil {
-                    Button { Task { await account.toggleFavorite(type: "event", id: item.id) } } label: {
-                        Image(systemName: account.favoriteEventIDs.contains(item.id) ? "heart.fill" : "heart")
-                            .foregroundStyle(account.favoriteEventIDs.contains(item.id) ? .red : .secondary)
-                    }
-                    .accessibilityLabel(account.favoriteEventIDs.contains(item.id) ? "일정 찜 해제" : "일정 찜")
-                    if let contentId = item.contentId {
-                        Button { Task { await account.toggleFavorite(type: "content", id: contentId) } } label: {
-                            Image(systemName: account.favoriteContentIDs.contains(contentId) ? "bookmark.fill" : "bookmark")
-                                .foregroundStyle(account.favoriteContentIDs.contains(contentId) ? .blue : .secondary)
+                    let saved = item.contentId.map { account.favoriteContentIDs.contains($0) } ?? account.favoriteEventIDs.contains(item.id)
+                    Button {
+                        Task {
+                            if let contentId = item.contentId {
+                                await account.toggleFavorite(type: "content", id: contentId)
+                            } else {
+                                await account.toggleFavorite(type: "event", id: item.id)
+                            }
                         }
-                        .accessibilityLabel(account.favoriteContentIDs.contains(contentId) ? "작품 찜 해제" : "작품 찜")
+                    } label: {
+                        Image(systemName: saved ? "heart.fill" : "heart")
+                            .foregroundStyle(saved ? .red : .secondary)
                     }
+                    .accessibilityLabel(saved ? "찜 해제" : "찜")
                 }
                 }
             }
