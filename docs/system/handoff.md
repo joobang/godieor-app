@@ -1,3 +1,8 @@
+## DATA-23 OTT 실게시 비교 인계 (2026-11-11)
+
+- backend `docs/tasks/DATA-23-ott-published-coverage.md`: `npm run audit:ott-published`로 StreamPick 발견 참고행 35개와 로컬 KR 검토 게시 OTT(11~12월 9건) 비교. 완전 일치 1, 시즌 확인 안 됨 3, 날짜 불일치 0, 미게시 31. 31건의 한국 첫 공개를 확인한 것은 아니며 임의 자동 게시 금지.
+- backend 자체 테스트 83/83. DB 게시 0/클라우드·iPhone·독립 검증 미실행. backend `.env.example`, app pbxproj 기존 dirty 보존. 다음은 공식 한국 플랫폼·날짜·시즌 근거 확인 후 reviewed publish 및 동일 재감사. 승인/acceptance/계약 변경 없음.
+
 ## DATA-18 인계 (2026-11-11)
 
 backend 공식 KR 공개 후보 2건(`재혼 황후` 11/03·`스마일 클리닉` 12/03) 추가, staging 86→88, 재실행 중복 0, 테스트 75/75. 신규 게시 0, DB 재조회/독립 검증/클라우드 배포 미실행. 원본 backend `docs/tasks/DATA-18-kr-ott-premiere-evidence.md`. 다음 담당은 reviewed candidate 수동 검토 연결 후 실제 DB 게시 여부 확인. iOS signing 미커밋 보존.
