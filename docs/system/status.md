@@ -261,3 +261,8 @@ AGENTS → 이파일 → handoff → 해당원본카드 순으로읽고 각저�
 - backend 공식 CJ TVING 기사에서 대리수능(11/23 첫 공개), 유일무이 로맨스(11/09 TVING 제공, 첫 공개 미확정)를 별도 후보로 반영. staged 92→94, StreamPick 참고 35행 중 제목 매칭 6, 조사 필요 29. 관련 6/6 테스트 성공.
 - **앱에 새로 표시된 일정 0건**. StreamPick 기준 동등한 앱 결과 미달. 검토→게시 연동 및 4개 제공처 실데이터 확보가 다음 작업. 앱 개인 signing dirty 보존. backend 카드 `docs/tasks/DATA-21-tving-reference-followup.md`.
 
+
+## DATA-22 한국 OTT 공식 공개일 2건 로컬 게시 (2026-11-11)
+
+- `재혼 황후`(Disney+, 2026-11-03), `스마일 클리닉`(쿠팡플레이, 2026-12-03) 검토 후 로컬 `ott_reviewed` 9→11건. SELECT에서 KR/서비스/날짜/`date_only`/`instant_at=NULL` 확인, backend 자체 `npm test` 81/81 성공. 카드 `backend/docs/tasks/DATA-22-reviewed-disney-coupang-publish.md`.
+- 공식 OTT 전체 커버리지, Render/Supabase, iPhone 실제 표시, 독립 검증 미완료. 기존 개인 iOS signing 및 backend .env.example dirty 유지.
