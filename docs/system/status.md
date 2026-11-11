@@ -246,3 +246,8 @@ AGENTS → 이파일 → handoff → 해당원본카드 순으로읽고 각저�
 - StreamPick 월별 캘린더의 Netflix/TVING/Disney+ 35개 제공처별 작품 행과 backend staging 비교: 초기 88건 중 제목 미매칭 32행. 공식 한국 출처 2건(`천천히 강렬하게` 12/11, `스타일 워즈` 11/11 날짜만 확인) 보강 후 staging 90건, 참고 목록 제목 미매칭 30행. **새 제품 DB 게시 0건**, 9건은 이전 로컬 기록으로 이번 재조회 없음.
 - backend `audit:ott-coverage`, `compare:ott-reference`와 개별 4개 Node 검사 PASS. 외부 목록은 발견용이며 자동 한국 최초 공개/수집률 근거가 아님. 외부 HTTP DNS 실패, Node20/dist EPERM으로 전체 테스트 불가. 수집 범위·게시 경로 개선 미완료. 원본 카드 `backend/docs/tasks/DATA-19-ott-coverage-audit.md`. iOS signing dirty 유지, 독립 검증/배포 미실행.
 
+## DATA-20 OTT 조사 queue (2026-11-11)
+
+- backend Netflix 공식 한국 뉴스룸 후보 2개를 추가해 staging 90→92. StreamPick의 35개 참고 행 중 제목/일정 근거 조사가 필요한 30행을 `work/ott-lineups/discovery-queue.json`으로 생성. 6/6 자체검사 PASS.
+- **제품 DB 신규 게시 0건**, 월간 자동 수집·실기기/클라우드 확인·독립 검증 미완료. 원본 카드 backend `docs/tasks/DATA-20-ott-discovery-queue.md`. iOS 사용자 서명 변경 보존.
+

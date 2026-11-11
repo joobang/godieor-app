@@ -244,3 +244,7 @@ backend IGDB KR 출시일에서 iOS/Android 분류를 지원하고 game_device e
 
 11~12월 StreamPick 비교표 35개 제공처별 행을 발견용 참고자료로 저장하고 staging과 제목/날짜 대조 도구 추가. backend 기존 후보 88→90(`천천히 강렬하게` 한국 최초 공개 확인, `스타일 워즈` 한국 스트리밍 날짜만 확인); StreamPick 35행 중 여전히 제목 미매칭 30행. 신규 DB 게시 0, 전체 월별 자동 수집 미완료. 개별 테스트 4/4 PASS, 전체 npm test 환경 EPERM/Node20 미통과. 다음은 공식 KR 일정 확장·후보→검토/게시 연결·실 DB 조회·Node24 전체 검증. backend 카드 `docs/tasks/DATA-19-ott-coverage-audit.md`; 앱 signing 보존. 계약/마이그레이션/독립 승인 변경 없음.
 
+## DATA-20 인계 (2026-11-11)
+
+Netflix 공식 한국 기사 2건 추가로 backend staging 90→92, StreamPick 35개 외부 참고 행 중 공식 근거 조사가 필요한 30개 행을 게시 차단 queue로 생성. 검사 6/6 PASS, 실제 DB 신규 게시 0. 자동 수집·확인 후 DB 게시 미완료. backend `docs/tasks/DATA-20-ott-discovery-queue.md` 확인. iOS 서명 설정 보존.
+
