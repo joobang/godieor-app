@@ -249,7 +249,7 @@ struct ContentView: View {
                     }
                     Section("게임 기기 · 선택 안 하면 전체") {
                         ForEach(catalogOptions.devices, id: \.self) { device in
-                            Toggle(device, isOn: storedSetBinding(device, key: "devices"))
+                            Toggle(gameDeviceLabel(device), isOn: storedSetBinding(device, key: "devices"))
                         }
                     }
                     if account.user != nil {
@@ -262,6 +262,18 @@ struct ContentView: View {
             }
             .navigationTitle("일정 필터")
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("완료") { showingFilters = false } } }
+        }
+    }
+
+    private func gameDeviceLabel(_ device: String) -> String {
+        switch device {
+        case "ios": return "iOS (아이폰·아이패드)"
+        case "android": return "Android"
+        case "pc": return "PC"
+        case "playstation": return "PlayStation"
+        case "xbox": return "Xbox"
+        case "switch": return "Nintendo Switch"
+        default: return device
         }
     }
 
@@ -473,7 +485,17 @@ private struct EventDetailView: View {
                 if let market = displayedEvent.releaseMarket { LabeledContent("공개 지역", value: market) }
                 if let country = displayedEvent.venueCountry { LabeledContent("개최국", value: country) }
                 if !displayedEvent.services.isEmpty { LabeledContent("OTT", value: displayedEvent.services.joined(separator: ", ")) }
-                if !displayedEvent.devices.isEmpty { LabeledContent("기기", value: displayedEvent.devices.joined(separator: ", ")) }
+                if !displayedEvent.devices.isEmpty { LabeledContent("기기", value: displayedEvent.devices.map { device in
+                    switch device {
+                    case "ios": return "iOS"
+                    case "android": return "Android"
+                    case "pc": return "PC"
+                    case "playstation": return "PlayStation"
+                    case "xbox": return "Xbox"
+                    case "switch": return "Nintendo Switch"
+                    default: return device
+                    }
+                }.joined(separator: ", ")) }
                 LabeledContent("데이터", value: displayedEvent.dataOrigin == "fixture" ? "가상 데이터" : "제공처 반영 데이터")
                 LabeledContent("최종 수정", value: displayedEvent.updatedAt)
                 if let previous = detail?.previousTime { LabeledContent("이전 일정", value: previous.description) }
