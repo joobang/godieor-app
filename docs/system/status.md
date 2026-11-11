@@ -251,3 +251,8 @@ AGENTS → 이파일 → handoff → 해당원본카드 순으로읽고 각저�
 - backend Netflix 공식 한국 뉴스룸 후보 2개를 추가해 staging 90→92. StreamPick의 35개 참고 행 중 제목/일정 근거 조사가 필요한 30행을 `work/ott-lineups/discovery-queue.json`으로 생성. 6/6 자체검사 PASS.
 - **제품 DB 신규 게시 0건**, 월간 자동 수집·실기기/클라우드 확인·독립 검증 미완료. 원본 카드 backend `docs/tasks/DATA-20-ott-discovery-queue.md`. iOS 사용자 서명 변경 보존.
 
+## DATA-21 StreamPick 4개 OTT 추가 비교 (2026-11-11)
+
+- backend 공식 CJ TVING 기사에서 대리수능(11/23 첫 공개), 유일무이 로맨스(11/09 TVING 제공, 첫 공개 미확정)를 별도 후보로 반영. staged 92→94, StreamPick 참고 35행 중 제목 매칭 6, 조사 필요 29. 관련 6/6 테스트 성공.
+- **앱에 새로 표시된 일정 0건**. StreamPick 기준 동등한 앱 결과 미달. 검토→게시 연동 및 4개 제공처 실데이터 확보가 다음 작업. 앱 개인 signing dirty 보존. backend 카드 `docs/tasks/DATA-21-tving-reference-followup.md`.
+

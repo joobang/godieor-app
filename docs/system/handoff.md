@@ -248,3 +248,7 @@ backend IGDB KR 출시일에서 iOS/Android 분류를 지원하고 game_device e
 
 Netflix 공식 한국 기사 2건 추가로 backend staging 90→92, StreamPick 35개 외부 참고 행 중 공식 근거 조사가 필요한 30개 행을 게시 차단 queue로 생성. 검사 6/6 PASS, 실제 DB 신규 게시 0. 자동 수집·확인 후 DB 게시 미완료. backend `docs/tasks/DATA-20-ott-discovery-queue.md` 확인. iOS 서명 설정 보존.
 
+## DATA-21 인계 (2026-11-11)
+
+StreamPick 참고 35개 플랫폼/작품/일자 행에서 TVING CJ 공식 근거 2개를 후보 staging에 추가. 현재 제목 매칭 6, 조사 29, 실제 DB 신규 게시는 0. backend `docs/tasks/DATA-21-tving-reference-followup.md` 확인. 다음 담당은 4개 제공처 한국 공식 일정 근거를 우선 확보하고 staging→검토→DB/API 게시를 연결하여 앱에서 확인해야 함. 개인 iOS 서명 변경 보존, verifier 승인 임의 수정 금지.
+
