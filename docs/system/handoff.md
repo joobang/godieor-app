@@ -252,3 +252,7 @@ Netflix 공식 한국 기사 2건 추가로 backend staging 90→92, StreamPick 
 
 StreamPick 참고 35개 플랫폼/작품/일자 행에서 TVING CJ 공식 근거 2개를 후보 staging에 추가. 현재 제목 매칭 6, 조사 29, 실제 DB 신규 게시는 0. backend `docs/tasks/DATA-21-tving-reference-followup.md` 확인. 다음 담당은 4개 제공처 한국 공식 일정 근거를 우선 확보하고 staging→검토→DB/API 게시를 연결하여 앱에서 확인해야 함. 개인 iOS 서명 변경 보존, verifier 승인 임의 수정 금지.
 
+## DATA-20 TMDB 한국 OTT 메타데이터 인계 (2026-11-11)
+
+backend `scripts/ingest-tmdb-catalog.mjs`, `docs/tasks/DATA-20-tmdb-kr-catalog.md`: 로컬 DB 고유 작품 568건·포스터 568건, 반복 적재 신규 0건, backend 자체 테스트 81/81 성공. 국내 OTT 공개일 확인/신규 달력 게시 0건(기존 9건 유지). 서비스별 매핑은 아직 로컬 수집 보고서에만 있으며 클라우드/앱 API 미반영. 다음은 한국 첫 공개 공식 날짜 근거 확보→검토된 이벤트 게시→실DB/API/폰 확인이다. 승인·독립 PASS 아님. Xcode 개인 signing dirty 유지.
+

@@ -1,3 +1,8 @@
+## DATA-20 TMDB 한국 OTT 메타데이터 로컬 적재 (2026-11-11)
+
+- backend TMDB KR watch-provider 작품 568개·포스터 568개 로컬 PostgreSQL 저장, 동일 실행 신규 INSERT 0 확인. Netflix/TVING/Disney+ TV·영화와 Coupang Play TV를 조회; Coupang Play 영화는 TMDB KR provider 미노출. 5페이지 검색 결과이며 11~12월 공개일 검증량이 아니다.
+- 기존 검토 게시 OTT 이벤트는 9건 그대로, 이번 메타데이터 적재로 달력에 새로 게시된 이벤트는 0건. API·클라우드·iPhone 표시 미연결. backend 자체 npm test 81/81 통과, 독립 검증 미실행. 기록: `backend/docs/tasks/DATA-20-tmdb-kr-catalog.md`. 전용 Mac 계정 정책/개인 signing 변경 없음.
+
 ## DATA-18 한국 OTT 최초 공개 근거 2건 후보 추가 (2026-11-11)
 
 - Disney+ 한국 페이지 `재혼 황후` 시즌1 2026-11-03, 쿠팡플레이 공식 보도자료 `스마일 클리닉` 2026-12-03 한국 첫 공개 근거를 backend `data/lineups/`에 각각 저장. Disney 글로벌 시장 미확인 기존 후보는 보존. source 시각 미명시/lineup 날짜 전용 모델이므로 둘 다 `date_only`.
