@@ -1,41 +1,61 @@
-# GODIEOR OTT 수집·게시 다음 에이전트 인계 · 2026-11-12
+# GODIEOR OTT 수집·게시 인계 · 2026-11-12 (DATA-45 반영)
 
-## 먼저 확인할 것
+## 읽는 순서와 작업 경계
 
-- `AGENTS.md` → `docs/system/status.md` → `docs/system/handoff.md` → 본 문서 → backend `docs/tasks/DATA-43-netflix-reviewed-batch.md` 및 `docs/tasks/DATA-44-netflix-review-backlog.md` 순으로 읽는다.
-- 이번 인계의 관측 기준(새 작업 전 HEAD 재조회): app `1478906` / backend `772db30` / verifier `e68fbf6`, 브랜치 `codex/data44-netflix-backlog` (3곳 동일). 이 문서 커밋 이후 HEAD는 바뀌므로 실제 `git rev-parse HEAD`, `git branch --show-current`, `git status --short`를 다시 확인한다.
-- 공통 상태·인계 원본은 app `docs/system/`; backend/verifier 사본은 내용 동일하게 유지. 동시 작업 시 별도 worktree/`codex/` 브랜치 사용.
+1. AGENTS.md, app docs/system/status.md, docs/system/handoff.md.
+2. 이 문서, backend docs/tasks/DATA-45-netflix-official-identities.md.
+3. 이전 근거가 필요하면 DATA-43-netflix-reviewed-batch.md, DATA-44-netflix-review-backlog.md.
 
-## 현재까지 입증된 사실
+DATA-45 시작 기준: app `ed5453c` / backend `fd76c95` / verifier `91dfc9e`. 작업 브랜치는 세 곳 모두 `codex/data45-netflix-identities`다. 현재 HEAD는 각 저장소에서 다시 조회한다. 기존 app 개인 signing pbxproj, backend .env.example/package.json과 audit 관련 미추적 4개 파일은 보존했다. 공통 status/handoff 원본은 app이고 backend/verifier 사본을 동일하게 유지한다. 동시 작업은 별도 브랜치/worktree로 분리한다.
 
-- 2026-11-12 DATA-43 시점 로컬 PostgreSQL에서 **2026년 11~12월 KR 4개 OTT 이벤트 17→42건(+25)** 실측. 그중 Netflix 11월 10→35건. 전체 `ott_reviewed` 고정 매핑 19→44. 이것은 **로컬 DB** 결과로, Cloud/Render/Supabase/iPhone 배포 완료를 뜻하지 않는다. DATA-44에서는 DB 재조회/신규 게시가 없었다.
-- Netflix 한국 공식 신규 공개 목록 `data/lineups/netflix-kr-2026-11-12-auto.json` **75건**. 저장된 TMDB 관측에서 영화 또는 해당 TV 시즌의 날짜가 일치한 단일 매칭 **31건**, 그 중 중복·기존 확인을 제외한 **25건**을 검토/게시했다. 날짜는 **한국 Netflix 등록·제공 날짜**이고 전 세계 시리즈 최초 공개나 작품의 극장 첫 개봉일과 항상 같지 않다.
-- DATA-44는 남은 **44건**을 읽기 전용으로 분류: 검색 미발견 33, TMDB 후보 날짜가 Netflix 한국 날짜보다 이전 10, 이후 1. 기존 검토의 제목·플랫폼·날짜·시즌 일치 2, 시즌 추가 확인 1, 미일치 41. 이 **41은 실 DB 미게시 수가 아니다**. 작품 종류 자동 확정/게시 0.
-- StreamPick 11건 참고 샘플: 기존 검증 일치 7, Netflix `오버액션 갱`은 공식 한국 공개일 **11/05**(참고 사이트 11/04), OTT 한국 공개일 미확인 **3건**(`전지적 집착 시점` TVING 11/08, `문무` Netflix 11/14, `나인 투 식스` Netflix 11/25). TMDB 방송 시작 날짜만으로 특정 OTT 한국 제공일을 확정하지 않는다.
-- StreamPick 2026년 11~12월 885 이벤트는 회차 849+신작 36이다. 대상 4 OTT에서 신작 15 플랫폼행·회차 703 플랫폼행. GODIEOR 첫 공개/입점 이벤트 수와 회차 합계를 같은 모수로 비교하지 않는다.
+## 최신 실제 결과
 
-## 다음 작업의 정확한 순서
+- DATA-45에서 로컬 PostgreSQL의 **2026년 11~12월 KR 4개 OTT 일정 42→53건(+11)**을 실제 SQL로 확인했다. Netflix 11월은35→46건, 연중 전체 ott_reviewed 고정 매핑/이벤트는44→55건이다. 신규11건은 영화·예능·시리즈로 검토한 작품이며 시리즈 시즌은 실제 확인된1, 영화·단독 스페셜은null을 보존했다. 모두 date_only이고 instant_at은NULL이다.
+- 임시 로컬 API의 GET /v1/events 기간 조회는HTTP200/53행이며 신규11개ID가 모두 포함됐다. 검사 후 임시API를 종료했다. 기존 서버·iPhone 설치는 변경하지 않았다.
+- 같은55개 매핑을 다시 게시해도 이벤트55건/신규11건의 변경 이력11건으로 동일했다. Node22.22.3 전체 작성자 검사149/149 통과(기존 dirty 포함 working tree). 권장Node24, 독립 verifier, 클라우드, iPhone 신규 표시 확인은 미실행이다.
 
-1. **현 상태·변경 충돌 확인**: 3개 저장소 HEAD/dirty, `work/ott-candidates/state.json` 존재 여부, `.env`/PostgreSQL 접속 가능 여부 검사. 기존 개인 iOS 서명 설정, backend `.env.example`, `package.json`, 기존 감사 스크립트/테스트의 미커밋 변경을 덮어쓰지 않는다.
-2. **DATA-44 44건 중 33건의 정체성 확인**: 한국 Netflix videoID로 공식 상세 페이지/원제/콘텐츠 유형·시즌을 다시 조사한다. 남은 날짜 불일치 11건은 동일 작품·시즌 여부와 Netflix **한국 서비스 등록일** vs TMDB 극장·방송일을 구분한다. `알리시아의 법` 시즌 null vs 기존 시즌 1 재대조. 자동으로 `premiereConfirmed=true`를 넣지 않는다.
-3. **후보 → 검토 → 게시 연결**: 근거가 있는 작품은 플랫폼·국가·작품·시즌·날짜를 검토하고 안정적인 별도 contentKey/eventKey를 매핑한다. 중복 작품/다른 OTT 입점일을 한 이벤트로 합치지 않는다. `backend/docs/reviewed-publish.md` 및 `backend/data/curated/netflix-kr-reviewed-2026-11-12.json` 참고. 날짜만 있으면 `date_only`, 시각 추정 금지.
-4. **실측하고 비교**: 게시 전후 같은 `2026-11-01 <= local_date < 2027-01-01`, `release_market='KR'`, `provider_key='ott_reviewed'`, 4개 서비스 조건으로 조회. Netflix 75개 목록 중 게시 상태, StreamPick **신작**과 회차를 따로 보고, 미일치 제목/날짜/시즌/플랫폼과 근거를 표로 기록한다. 수치가 같아도 한국 첫 제공일 근거 없이는 임의 게시 금지.
-5. **출처 확대·제품 반영**: TVING/Disney+/Coupang Play 한국 공식 예정작 수집도 Netflix와 같은 원천+TMDB 방식 적용. `ott_season_premiere`와 한국 OTT 새 입점일을 명확히 분리할 데이터 모델은 ADR/API/마이그레이션/iOS 영향 검토 후 구현. 클라우드·iPhone 배포/독립 verifier 승인은 별도 실행·확인 필요.
+## DATA-44의44건을 어떻게 이어받았는가
 
-## 재현 명령 및 파일
+- 공식 Netflix 한국 월간 목록75건 중 기존 TMDB 날짜 단일 매칭31건을 제외한44건이 DATA-44 조사 대상이었다. 당시 한국어 검색 미발견33건, 후보 날짜 이전10건, 이후1건이다. 이는 실제 미게시 수가 아니다.
+- 이번에는44개 videoID의 공식 상세를 모두 조회 시도했다. 영문 표시명·형식 확인28건, 웹 도구 fetch 실패16건이다. 미발견33건 중22건, 날짜차이11건 중6건에서 상세를 확인했다. fetch 실패는 Netflix에 작품이 없다는 뜻이 아니다.
+- 공식 상세의 영문 제목을 videoID와 묶어 TMDB를 재조회했다. 목록 title2는 시즌/부제일 수 있어 원제로 쓰지 않는다. 상세에서 다른 국가로 redirect되더라도 한국 날짜는 공식KR목록에서만 가져온다. JSON-LD dateCreated/startDate나 예고편 시즌을 한국 첫 공개일로 대입하지 않는다.
+- 상세 확인28건 중 NFL 생중계1건은 OTT 신작 게시 대상에서 제외했다. 나머지27건의 TMDB 재조회는 날짜 일치14, 날짜 차이11, 제목 미발견2다. 날짜 일치14 중 기존 알리시아의 법1건과 검색잘림 Allen/Gordon2건을 제외한11건을 작성자 수동 검토·게시했다. 보고서 자체는 자동 게시하지 않는다.
+- 알리시아의 법은 videoID82013595→시리즈82013594, 공식 시즌1/TVSeries와 TMDB tv338562 시즌1 11/11이 일치해 기존 시즌1 검토를 재확인했다. 중복 게시하지 않았다.
+- 오버액션 갱은 공식KR11/05, 가능한 사랑은11/06을 유지한다. TMDB 극장/해외 날짜로 덮어쓰지 않는다. 날짜 차이가 있는 작품을 이번에 신규 게시하지 않았다.
+
+## 다음 작업 순서
+
+1. 세 저장소 HEAD/dirty와 후보state, 로컬 DB 준비를 확인한다. 비밀값은 출력하지 않는다. 날짜 범위와 provider 조건을 고정해53건을 재측정할 수 있다.
+2. **공식 상세 실패16건**을 작품ID와 공식 접근 가능한 자료로 확인한다. 게임/보너스/회차/스포츠를 제목만으로 영화·드라마로 분류하지 않는다. www.netflix.com robots의 일반bot 제한을 확인했으므로 임의의 직접 상세 스크래핑 배치를 재개하지 않는다.
+3. **TMDB 제목 미발견2건**(Mike Ward: Modest, Nate Bargatze: Good For Nathan)은 공식 제목 변형과 대체 제목을 확인한다. **검색잘림4건**(My Best Friend, Allen, Gordon, The Child)은 연도·배우·제작국가로 정체성을 좁힌다. 후보 날짜가 같다는 이유로 자동 승인하지 않는다.
+4. **날짜 차이11건**은 같은 작품/시즌인지 먼저 확인하고 한국 플랫폼 첫 제공일과 극장/해외방송 날짜를 구분한다. arrival 유형 분리는ADR/API/migration/iOS 영향을 검토한 뒤 별도 구현한다.
+5. 공식 근거를 검토한 후보만 review→고정 mapping→로컬 publish하고 전후 SQL/API·멱등성을 확인한다. TVING/Disney+/Coupang 공식 원천 확대도 남아 있다. 클라우드·실폰·독립 검증은 실제 실행 전 완료로 표현하지 않는다.
+
+StreamPick 참고11건은 일치7/공식 날짜 차이1/한국OTT날짜 미확인3 상태다. 미확인3은 전지적 집착 시점(TVING11/08), 문무(Netflix11/14), 나인 투 식스(Netflix11/25)다. 방송 시작일만으로 해당OTT 제공일을 확정하지 않는다. 참고 달력885이벤트(회차849+신작36)와 GODIEOR 첫 공개/입점 건수를 같은 모수로 비교하지 않는다.
+
+## 재현 파일과 명령
+
+backend 원본:
+
+- docs/tasks/DATA-45-netflix-official-identities.md:44건 조사표,11건 게시표, 실제 명령·검사·digest.
+- data/reference/netflix-official-identities-2026-11-12.json:공식ID에 묶인 수동 상세 관측. 영문 표시명은 제작 원제라는 뜻이 아니다.
+- scripts/enrich-netflix-identity-aliases.mjs 및 tests/netflix-identity-aliases.test.mjs:영문 별칭의 읽기 전용 TMDB대조, 합성 경계 검사.
+- data/reference/netflix-identity-tmdb-crosscheck-2026-11-12.json:실TMDB관측(오류/잘림 유지).
+- data/curated/netflix-kr-reviewed-identities-2026-11-12.json:11개 수동review·TMDBID·고정mapping.
+- data/curated/ott-reviewed-mappings.json:전체55개 고정 매핑. 후보state는Git제외이므로 새 환경은 원본75개lineup bridge와 각 curated review로 복원한다.
+- data/reference/netflix-identity-publication-evidence-2026-11-12.json:작성자SQL/API/재게시 증거. 독립 정답fixture·verdict가 아니다.
 
 ```sh
 cd /Users/dojoohwan/workspace/godieor-backend
-# 지원 Node 버전은 package.json engines 확인. DATA-44는 Node22로 자체검사 145/145 통과 기록.
-node --test tests/ott-review-backlog.test.mjs
-node scripts/classify-ott-review-backlog.mjs data/lineups/netflix-kr-2026-11-12-auto.json data/reference/netflix-kr-tmdb-evidence-2026-11-12.json data/reference/ott-reviewed-mapping-snapshot-2026-11-12.json /private/tmp/godieor-next-backlog.json
-# 로컬 DB 및 .env가 준비된 경우에만 (읽기 전용):
+node --test tests/netflix-identity-aliases.test.mjs
+# 키가 설정된 경우에만 실행하는 읽기 전용 실조회. 출력 파일은 새 경로 사용.
+node --env-file=.env scripts/enrich-netflix-identity-aliases.mjs data/reference/netflix-official-identities-2026-11-12.json /private/tmp/godieor-next-identity-crosscheck.json --live
+# 로컬 DB 읽기 전용 비교:
 node --env-file=.env scripts/audit-ott-published.mjs data/reference/streampick-2026-11-12-gap11.json
-# 검토된 후보·고정 매핑이 준비된 경우, 의도적으로 로컬 DB를 변경하는 명령:
-# npm run publish:reviewed -- --file data/curated/ott-reviewed-mappings.json
+# 검토·고정 매핑·후보state가 준비된 경우에만 의도적으로 로컬 DB에 게시:
+# node --env-file=.env dist/src/cli/publish-reviewed.js --file data/curated/ott-reviewed-mappings.json
 ```
 
-- 백엔드 원본 입력: `data/reference/netflix-kr-tmdb-evidence-2026-11-12.json`, `data/reference/ott-reviewed-mapping-snapshot-2026-11-12.json`, 분류 결과 `data/reference/netflix-kr-review-backlog-2026-11-12.json`, 구현 `scripts/classify-ott-review-backlog.mjs`, 검사 `tests/ott-review-backlog.test.mjs`.
-- DATA-43 Node22 전체 테스트 **138/138**, DATA-44 Node22 전체 테스트 **145/145**는 각각 해당 당시의 작성자 검사. 이번 문서 전용 작업의 신규 DB 조회/앱 빌드/독립 검증은 수행하지 않았다.
-- verifier `requirements/acceptance.yaml`은 구현자가 승인하지 않는다. API 계약 `0.1.0-draft.2` digest `e2e368a3b285ab0dae7d5f1d6f497c3de28ca0c099b2da10344a0a1a857e515c`, migration digest `a6009a82ea00e08cfefa5d294ed40e2f5fb30a0e6e6807bf22e3db79217bb2e7` (DATA-44 기준). 새 검증 전 재계산.
-- 작업 기록용 요구사항: `PROD-005/006/007/009` (GD-005/006/007/009). 예상 실패: 잘못된 TMDB 동명 작품 매칭, 동일 시즌의 중복 게시, 방송 날짜를 Netflix 날짜로 오판, 서로 다른 플랫폼 이벤트 병합. ADR/LEARN 신규 없음(기존 수집 절차 인계만 수행).
+권장Node는package.json engines 기준이다. DATA-45의Node22 결과를 권장Node24 검증으로 표현하지 않는다. 전체149개 검사는 기존 dirty/미추적 파일을 포함한 당시 작업 트리 기준이다.
+
+요구사항 PROD-005/006/007/009(GD-005/006/007/009). 계약0.1.0-draft.2 digest `e2e368a3b285ab0dae7d5f1d6f497c3de28ca0c099b2da10344a0a1a857e515c`, migration집합 digest `a6009a82ea00e08cfefa5d294ed40e2f5fb30a0e6e6807bf22e3db79217bb2e7`은 DATA-45에서 재확인했고 변경하지 않았다. verifier acceptance는draft/미승인 그대로다. 새로운 독립review에는 구현 대화·작성자 판단을 정답으로 주입하지 않는다. 담당codex-data45-01은 종료 시 해제한다.
