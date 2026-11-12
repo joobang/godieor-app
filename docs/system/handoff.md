@@ -1,3 +1,8 @@
+## DATA-44 인계 (2026-11-12)
+
+- backend `docs/tasks/DATA-44-netflix-review-backlog.md`에75건/미분류44건 재현 분류와 행별 후속 검토표. `scripts/classify-ott-review-backlog.mjs`, `data/reference/netflix-kr-*-2026-11-12.json` 및 검토 매핑 snapshot 사용. 검색미발견33/후보날짜이전10/이후1, 기존검토2+시즌미확인1+매핑미일치41. 날짜차이를 입점/재공개로 단정하지 않음.
+- 최종Node22 npm test145/145 통과(기존dirty/미추적포함working tree), 권장Node24·독립검증미실행. 웹/DB이번조회0·신규게시0, 이전로컬42건은재측정아님. 다음은33건공식videoID원제/종류확인→11건정체성/플랫폼날짜의미→알리시아의법시즌확인. 앱코드/계약/migration/verdict변경없음. 공통문서이번머리말만선택커밋, 기존본문dirty/signing/다른도구보존. 담당codex-data44-01해제.
+
 ## DATA-23 OTT 실게시 비교 인계 (2026-11-11)
 
 - backend `docs/tasks/DATA-23-ott-published-coverage.md`: `npm run audit:ott-published`로 StreamPick 발견 참고행 35개와 로컬 KR 검토 게시 OTT(11~12월 9건) 비교. 완전 일치 1, 시즌 확인 안 됨 3, 날짜 불일치 0, 미게시 31. 31건의 한국 첫 공개를 확인한 것은 아니며 임의 자동 게시 금지.
