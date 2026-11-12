@@ -325,7 +325,13 @@ struct ContentView: View {
                                 Text("\(number)").font(.caption.bold())
                                 if let day, day.total > 0 {
                                     ForEach(day.previews.prefix(2)) { item in
-                                        Text(item.title).font(.system(size: 9)).lineLimit(1)
+                                        HStack(spacing: 2) {
+                                            if item.kind == "ott_season_premiere" {
+                                                Text(item.services.map(ottMark).joined(separator: "/"))
+                                                    .font(.system(size: 8, weight: .heavy))
+                                            }
+                                            Text(item.title).font(.system(size: 9)).lineLimit(1)
+                                        }
                                     }
                                     if day.total > day.previews.count {
                                         Text("+\(day.total - day.previews.count)").font(.caption2.bold())
@@ -367,6 +373,17 @@ struct ContentView: View {
                             if item.status != "scheduled" { Text(item.statusTitle).font(.caption).foregroundStyle(.red) }
                         }
                         Text(item.title).font(.body.bold())
+                        if item.kind == "ott_season_premiere" {
+                            HStack(spacing: 5) {
+                                ForEach(item.services, id: \.self) { service in
+                                    Text(ottMark(service))
+                                        .font(.caption2.bold())
+                                        .padding(.horizontal, 7).padding(.vertical, 3)
+                                        .background(Color.accentColor.opacity(0.14), in: Capsule())
+                                        .accessibilityLabel(ottName(service))
+                                }
+                            }
+                        }
                         Text(item.time.description).font(.caption).foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -391,6 +408,26 @@ struct ContentView: View {
                 }
                 }
             }
+        }
+    }
+
+    private func ottMark(_ service: String) -> String {
+        switch service {
+        case "netflix": "N"
+        case "disney_plus": "Disney+"
+        case "tving": "TVING"
+        case "coupang_play": "Coupang Play"
+        default: service
+        }
+    }
+
+    private func ottName(_ service: String) -> String {
+        switch service {
+        case "netflix": "넷플릭스"
+        case "disney_plus": "디즈니플러스"
+        case "tving": "티빙"
+        case "coupang_play": "쿠팡플레이"
+        default: service
         }
     }
 
