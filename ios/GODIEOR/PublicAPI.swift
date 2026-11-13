@@ -56,6 +56,7 @@ struct ReleaseEvent: Decodable, Identifiable {
             case "movie": "OTT · 영화"
             case "original_series": "OTT · 오리지널 시리즈"
             case "variety": "OTT · 예능"
+            case "documentary": "OTT · 다큐"
             case "other": "OTT · 기타"
             default: "OTT · 시리즈"
             }
