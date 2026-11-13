@@ -1,6 +1,6 @@
 import Foundation
 
-// Matches backend contract 0.1.0-draft.2. Date-only values remain civil-date strings.
+// Matches the pinned backend contract in docs/api/contract-reference.json. Date-only values remain civil-date strings.
 struct CatalogOptions: Decodable {
     struct QueryDefaults: Decodable {
         let country: String
