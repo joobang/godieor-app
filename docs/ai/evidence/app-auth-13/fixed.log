@@ -1,0 +1,16 @@
+PASS restore settings and both favorite types
+PASS login saves issued session and loads account
+PASS failed authorization does not create a session
+PASS new account failed refresh never retains old snapshot
+PASS logout server failure still clears local session
+PASS offline restore retains recoverable session
+PASS expired restore clears local account
+PASS settings conflict reloads version and preserves error
+PASS favorite conflict retries entire snapshot
+PASS favorite repeated cursor fails without erasing prior state
+PASS favorite writes and retries after failure
+PASS old account 401 cannot clear restored account
+PASS logout releases busy while old save is pending
+PASS older settings response cannot overwrite newer save
+PASS old operation cannot release new account busy state
+Account flow scenarios: 15/15 passed; synthetic transport/store/auth only

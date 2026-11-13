@@ -1,0 +1,133 @@
+--- a/ios/GODIEOR/Account.swift
++++ b/ios/GODIEOR/Account.swift
+@@ -3,7 +3,9 @@
+ import Foundation
+ import Security
+ import SwiftUI
++#if canImport(UIKit)
+ import UIKit
++#endif
+ 
+ struct AccountUser: Decodable {
+     let id: String
+@@ -92,6 +94,7 @@
+     }
+ }
+ 
++#if canImport(UIKit)
+ @MainActor
+ private final class GoogleAuthorization: NSObject, ASWebAuthenticationPresentationContextProviding {
+     private var session: ASWebAuthenticationSession?
+@@ -174,6 +177,8 @@
+     }
+ }
+ 
++#endif
++
+ private extension Data {
+     var base64URLEncoded: String {
+         base64EncodedString().replacingOccurrences(of: "+", with: "-")
+@@ -184,6 +189,15 @@
+ private extension String {
+     var formEncoded: String {
+         addingPercentEncoding(withAllowedCharacters: CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")) ?? self
++    }
++}
++
++struct AccountSessionStore {
++    var load: () -> String?
++    var save: (String) throws -> Void
++    var remove: () -> Void
++    static var keychain: Self {
++        .init(load: SessionKeychain.load, save: SessionKeychain.save, remove: SessionKeychain.remove)
+     }
+ }
+ 
+@@ -204,13 +218,35 @@
+     private var settingsMutationRevision = 0
+     private var pendingFavorites = [String: UUID]()
+     private var favoriteMutationRevision = 0
+-    private let google = GoogleAuthorization()
++    private let transport: @MainActor (URLRequest) async throws -> (Data, URLResponse)
++    private let endpoint: () -> URL?
++    private let sessionStore: AccountSessionStore
++    private let authorize: @MainActor () async throws -> String
++
++    init(
++        transport: @escaping @MainActor (URLRequest) async throws -> (Data, URLResponse) = { try await URLSession.shared.data(for: $0) },
++        endpoint: @escaping () -> URL? = { APIEndpointConfiguration.current() },
++        sessionStore: AccountSessionStore = .keychain,
++        authorize: (@MainActor () async throws -> String)? = nil
++    ) {
++        self.transport = transport
++        self.endpoint = endpoint
++        self.sessionStore = sessionStore
++#if canImport(UIKit)
++        let google = GoogleAuthorization()
++        self.authorize = authorize ?? { try await google.idToken() }
++#else
++        self.authorize = authorize ?? { throw AccountFailure.notConfigured }
++#endif
++    }
++
++    var hasRestorableSession: Bool { token != nil }
+     private let decoder: JSONDecoder = {
+         let d = JSONDecoder()
+         d.dateDecodingStrategy = .iso8601
+         return d
+     }()
+-    private var baseURL: URL? { APIEndpointConfiguration.current() }
++    private var baseURL: URL? { endpoint() }
+ 
+     private func request<T: Decodable>(_ path: String, method: String = "GET", body: Data? = nil, authenticated: Bool = true, sessionToken: String? = nil, query: [URLQueryItem] = []) async throws -> T {
+         guard let baseURL else { throw AccountFailure.apiNotConfigured }
+@@ -226,7 +262,7 @@
+             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+         }
+         request.httpBody = body
+-        let (data, response) = try await URLSession.shared.data(for: request)
++        let (data, response) = try await transport(request)
+         guard let status = (response as? HTTPURLResponse)?.statusCode else { throw AccountFailure.invalidResponse(0) }
+         if status == 401 { throw AccountFailure.sessionExpired }
+         guard (200..<300).contains(status) else { throw AccountFailure.invalidResponse(status) }
+@@ -239,14 +275,14 @@
+         request.httpMethod = method
+         guard let token = sessionToken ?? token else { throw AccountFailure.sessionExpired }
+         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+-        let (_, response) = try await URLSession.shared.data(for: request)
++        let (_, response) = try await transport(request)
+         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+         if status == 401 { throw AccountFailure.sessionExpired }
+         guard status == 204 else { throw AccountFailure.invalidResponse(status) }
+     }
+ 
+     func restore() async {
+-        guard let token = SessionKeychain.load() else { return }
++        guard let token = sessionStore.load() else { return }
+         sessionGeneration += 1
+         self.token = token
+         await refresh()
+@@ -258,12 +294,12 @@
+         defer { busy = false }
+         let generation = sessionGeneration
+         do {
+-            let idToken = try await google.idToken()
++            let idToken = try await authorize()
+             guard generation == sessionGeneration else { return }
+             let body = try JSONSerialization.data(withJSONObject: ["idToken": idToken])
+             let session: AccountSession = try await request("auth/google", method: "POST", body: body, authenticated: false)
+             guard generation == sessionGeneration else { return }
+-            try SessionKeychain.save(session.accessToken)
++            try sessionStore.save(session.accessToken)
+             sessionGeneration += 1
+             token = session.accessToken
+             user = session.user
+@@ -433,7 +469,7 @@
+         settingsMutationRevision += 1
+         pendingFavorites.removeAll()
+         favoriteMutationRevision += 1
+-        SessionKeychain.remove()
++        sessionStore.remove()
+         token = nil
+         user = nil
+         settings = nil

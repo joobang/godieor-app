@@ -108,7 +108,7 @@ struct ContentView: View {
             }
             .task { await initializeAccount() }
             .onChange(of: scenePhase) { _, phase in
-                guard phase == .active, account.user != nil else { return }
+                guard phase == .active, account.hasRestorableSession else { return }
                 Task {
                     await account.refresh()
                     applyAccountSettings()
@@ -158,6 +158,15 @@ struct ContentView: View {
                 }.font(.caption2).foregroundStyle(.secondary)
                 Text("현재 필터 변경은 ‘현재 필터 저장’을 눌러야 계정에 반영돼요.")
                     .font(.caption2).foregroundStyle(.secondary)
+            } else if account.hasRestorableSession {
+                Text(account.isSyncing ? "계정 연결을 확인하고 있어요." : "계정 연결을 확인하지 못했어요.")
+                    .font(.caption)
+                HStack {
+                    Button("다시 시도") {
+                        Task { await account.refresh(); applyAccountSettings() }
+                    }.disabled(account.isSyncing || account.busy)
+                    Button("로그아웃") { Task { await account.signOut() } }
+                }.font(.caption)
             } else {
                 HStack {
                     Text("로그인하면 설정과 찜을 계정에 저장할 수 있어요.").font(.caption)

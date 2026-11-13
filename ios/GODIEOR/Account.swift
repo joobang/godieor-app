@@ -3,7 +3,9 @@ import CryptoKit
 import Foundation
 import Security
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#endif
 
 struct AccountUser: Decodable {
     let id: String
@@ -92,6 +94,7 @@ private enum SessionKeychain {
     }
 }
 
+#if canImport(UIKit)
 @MainActor
 private final class GoogleAuthorization: NSObject, ASWebAuthenticationPresentationContextProviding {
     private var session: ASWebAuthenticationSession?
@@ -174,6 +177,8 @@ private final class GoogleAuthorization: NSObject, ASWebAuthenticationPresentati
     }
 }
 
+#endif
+
 private extension Data {
     var base64URLEncoded: String {
         base64EncodedString().replacingOccurrences(of: "+", with: "-")
@@ -184,6 +189,15 @@ private extension Data {
 private extension String {
     var formEncoded: String {
         addingPercentEncoding(withAllowedCharacters: CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~")) ?? self
+    }
+}
+
+struct AccountSessionStore {
+    var load: () -> String?
+    var save: (String) throws -> Void
+    var remove: () -> Void
+    static var keychain: Self {
+        .init(load: SessionKeychain.load, save: SessionKeychain.save, remove: SessionKeychain.remove)
     }
 }
 
@@ -199,18 +213,41 @@ final class AccountState: ObservableObject {
     @Published private(set) var syncFailed = false
     @Published var errorText: String?
     private var token: String?
+    private var busyOperation: UUID?
     private var sessionGeneration = 0
     private var refreshRevision = 0
     private var settingsMutationRevision = 0
     private var pendingFavorites = [String: UUID]()
     private var favoriteMutationRevision = 0
-    private let google = GoogleAuthorization()
+    private let transport: @MainActor (URLRequest) async throws -> (Data, URLResponse)
+    private let endpoint: () -> URL?
+    private let sessionStore: AccountSessionStore
+    private let authorize: @MainActor () async throws -> String
+
+    init(
+        transport: @escaping @MainActor (URLRequest) async throws -> (Data, URLResponse) = { try await URLSession.shared.data(for: $0) },
+        endpoint: @escaping () -> URL? = { APIEndpointConfiguration.current() },
+        sessionStore: AccountSessionStore = .keychain,
+        authorize: (@MainActor () async throws -> String)? = nil
+    ) {
+        self.transport = transport
+        self.endpoint = endpoint
+        self.sessionStore = sessionStore
+#if canImport(UIKit)
+        let google = GoogleAuthorization()
+        self.authorize = authorize ?? { try await google.idToken() }
+#else
+        self.authorize = authorize ?? { throw AccountFailure.notConfigured }
+#endif
+    }
+
+    var hasRestorableSession: Bool { token != nil }
     private let decoder: JSONDecoder = {
         let d = JSONDecoder()
         d.dateDecodingStrategy = .iso8601
         return d
     }()
-    private var baseURL: URL? { APIEndpointConfiguration.current() }
+    private var baseURL: URL? { endpoint() }
 
     private func request<T: Decodable>(_ path: String, method: String = "GET", body: Data? = nil, authenticated: Bool = true, sessionToken: String? = nil, query: [URLQueryItem] = []) async throws -> T {
         guard let baseURL else { throw AccountFailure.apiNotConfigured }
@@ -226,7 +263,7 @@ final class AccountState: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         request.httpBody = body
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await transport(request)
         guard let status = (response as? HTTPURLResponse)?.statusCode else { throw AccountFailure.invalidResponse(0) }
         if status == 401 { throw AccountFailure.sessionExpired }
         guard (200..<300).contains(status) else { throw AccountFailure.invalidResponse(status) }
@@ -239,14 +276,14 @@ final class AccountState: ObservableObject {
         request.httpMethod = method
         guard let token = sessionToken ?? token else { throw AccountFailure.sessionExpired }
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await transport(request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         if status == 401 { throw AccountFailure.sessionExpired }
         guard status == 204 else { throw AccountFailure.invalidResponse(status) }
     }
 
     func restore() async {
-        guard let token = SessionKeychain.load() else { return }
+        guard let token = sessionStore.load() else { return }
         sessionGeneration += 1
         self.token = token
         await refresh()
@@ -254,19 +291,28 @@ final class AccountState: ObservableObject {
 
     func signIn() async {
         guard !busy else { return }
-        busy = true
-        defer { busy = false }
+        let operation = beginBusy()
+        defer { endBusy(operation) }
         let generation = sessionGeneration
         do {
-            let idToken = try await google.idToken()
+            let idToken = try await authorize()
             guard generation == sessionGeneration else { return }
             let body = try JSONSerialization.data(withJSONObject: ["idToken": idToken])
             let session: AccountSession = try await request("auth/google", method: "POST", body: body, authenticated: false)
             guard generation == sessionGeneration else { return }
-            try SessionKeychain.save(session.accessToken)
+            try sessionStore.save(session.accessToken)
             sessionGeneration += 1
             token = session.accessToken
             user = session.user
+            // A newly issued session must never inherit another account's snapshot.
+            refreshRevision += 1
+            settingsMutationRevision += 1
+            favoriteMutationRevision += 1
+            pendingFavorites.removeAll()
+            settings = nil
+            favoriteEventIDs.removeAll()
+            favoriteContentIDs.removeAll()
+            isSyncing = false
             lastSyncedAt = nil
             syncFailed = false
             errorText = nil
@@ -346,8 +392,9 @@ final class AccountState: ObservableObject {
         guard let version = settings?.version, let activeToken = token else { return }
         let generation = sessionGeneration
         settingsMutationRevision += 1
-        busy = true
-        defer { busy = false }
+        let mutation = settingsMutationRevision
+        let operation = beginBusy()
+        defer { endBusy(operation) }
         do {
             let payload: [String: Any] = [
                 "expectedVersion": version, "country": country, "timeZone": timeZone,
@@ -356,12 +403,12 @@ final class AccountState: ObservableObject {
             ]
             let body = try JSONSerialization.data(withJSONObject: payload)
             let updated: AccountSettings = try await request("me/settings", method: "PUT", body: body, sessionToken: activeToken)
-            guard generation == sessionGeneration, token == activeToken else { return }
+            guard generation == sessionGeneration, token == activeToken, mutation == settingsMutationRevision else { return }
             settings = updated
             // The server acknowledged this settings write; favorites may still need refreshing.
             errorText = nil
         } catch {
-            guard generation == sessionGeneration, token == activeToken else { return }
+            guard generation == sessionGeneration, token == activeToken, mutation == settingsMutationRevision else { return }
             if case AccountFailure.sessionExpired = error {
                 clearLocal()
                 errorText = error.localizedDescription
@@ -370,7 +417,7 @@ final class AccountState: ObservableObject {
             let message = error.localizedDescription
             // Reload the latest version but preserve the conflict message for the user.
             await refresh()
-            if generation == sessionGeneration, token == activeToken {
+            if generation == sessionGeneration, token == activeToken, mutation == settingsMutationRevision {
                 errorText = message + " 계정 설정을 다시 확인한 뒤 저장해 주세요."
             }
         }
@@ -427,13 +474,28 @@ final class AccountState: ObservableObject {
         }
     }
 
+    private func beginBusy() -> UUID {
+        let operation = UUID()
+        busyOperation = operation
+        busy = true
+        return operation
+    }
+
+    private func endBusy(_ operation: UUID) {
+        guard busyOperation == operation else { return }
+        busyOperation = nil
+        busy = false
+    }
+
     private func clearLocal() {
+        busyOperation = nil
+        busy = false
         sessionGeneration += 1
         refreshRevision += 1
         settingsMutationRevision += 1
         pendingFavorites.removeAll()
         favoriteMutationRevision += 1
-        SessionKeychain.remove()
+        sessionStore.remove()
         token = nil
         user = nil
         settings = nil
