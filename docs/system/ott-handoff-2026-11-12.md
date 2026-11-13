@@ -1,4 +1,11 @@
-# GODIEOR OTT 수집·게시 인계 · 2026-11-13 (DATA-50 반영)
+# GODIEOR OTT 수집·게시 인계 · 2026-11-13 (DATA-51 반영)
+
+## DATA-51 문무 티빙 공개일 확인·로컬 게시 (2026-11-13)
+
+- 원본 backend `docs/tasks/DATA-51-tving-dates.md`, `docs/tasks/evidence/data51/`. 공식 티빙 작품·이번 주 일정에서 문무 11/14 공개를 확인해 TVING 별도 이벤트로 게시했다. 같은 11~12월 KR 4OTT 범위 61→62건, 연중 매핑/이벤트64건. 시각·시즌 번호는 추정하지 않아 date_only/instantNULL/seasonNULL로 보존했다. Netflix 문무 후보의 날짜는 여전히 미확인이다.
+- 공식 TVING 작품 permalink를 수동 검토 출처로 지원(자동 피드 추가 아님). 다른 호스트·login/player/live·임의query와 다른 플랫폼 게시를 차단했다. 관련38/38 및 Node24 추적 전체156/156, 고정 커밋 재시도 서버156/156·unsigned iOS·임시DB migration/반복수집/API 검사 성공. 최초 Prisma 생성 ECONNRESET 후 재시도 성공 이력도 보존했다.
+- SQL·임시HTTP200/62행/신규ID·출처·원 날짜 확인. 재게시 이벤트64/신규변경이력1 유지, 기존63개 event 전체행 불변. source별 staging175/재실행 신규0. 나머지 티빙4개 첫날은 보류한다. 계약/migration/승인 기준 변경 없음.
+- 최종 runner ERROR: secret-check 환경변수 참조 탐지1건, 필수4개 SKIPPED, 독립review/acceptance승인 대기. 실폰 최신 표시·클라우드·OS격리 검증 미실행. 중단된 근거 저장·인계·커밋을 후속 사용자 요청으로 마무리했다. 기존 개인dirty 보존, 담당 해제.
 
 ## DATA-50 공식 후보 5개 추가·PAW 게임 식별 (2026-11-13)
 
@@ -21,7 +28,7 @@
 ## 읽는 순서와 작업 경계
 
 1. AGENTS.md, app docs/system/status.md, docs/system/handoff.md.
-2. 이 문서, backend docs/tasks/DATA-50-official-gap-review.md, DATA-49-reviewed-documentary.md.
+2. 이 문서, backend docs/tasks/DATA-51-tving-dates.md, DATA-50-official-gap-review.md.
 3. 이전 근거가 필요하면 DATA-46-netflix-search-disambiguation.md, DATA-45-netflix-official-identities.md, DATA-43-netflix-reviewed-batch.md, DATA-44-netflix-review-backlog.md.
 
 DATA-47 시작 기준: app `81d1d20` / backend `f7480e4` / verifier `b3c9721`. 작업 브랜치는 세 곳 모두 `codex/data47-netflix-official-recovery`다. 현재 HEAD는 각 저장소에서 다시 조회한다. 기존 app 개인 signing pbxproj, backend .env.example/package.json과 audit 관련 미추적 4개 파일은 보존했다. 공통 status/handoff 원본은 app이고 backend/verifier 사본을 동일하게 유지한다. 동시 작업은 별도 브랜치/worktree로 분리한다.
@@ -59,11 +66,11 @@ DATA-47 시작 기준: app `81d1d20` / backend `f7480e4` / verifier `b3c9721`. �
 - 알리시아의 법은 videoID82013595→시리즈82013594, 공식 시즌1/TVSeries와 TMDB tv338562 시즌1 11/11이 일치해 기존 시즌1 검토를 재확인했다. 중복 게시하지 않았다.
 - 오버액션 갱은 공식KR11/05, 가능한 사랑은11/06을 유지한다. TMDB 극장/해외 날짜로 덮어쓰지 않는다. 날짜 차이가 있는 작품을 이번에 신규 게시하지 않았다.
 
-## 다음 작업 순서 (DATA-50 이후)
+## 다음 작업 순서 (DATA-51 이후)
 
-1. 세 저장소 HEAD/dirty와 후보state/로컬DB를 확인하고 같은KR/11~12월/provider/4서비스61건을기준으로진행한다. 개인설정·미추적도구를보존한다.
+1. 세 저장소 HEAD/dirty와 후보state/로컬DB를 확인하고 같은KR/11~12월/provider/4서비스62건(연중64매핑)을기준으로진행한다. 개인설정·미추적도구를보존한다.
 2. 다큐지원설계(DATA-48)와로컬migration/캐런리드검토·게시(DATA-49)는완료했다. 다른OTT공식한국최초공개근거를확대하고충분한경우에만추가review→고정mapping→게시→SQL/API/멱등성확인한다. secret룰runtime참조탐지검토/독립필수검사는별도미완료다.
-3. **PAW Patrol: The Game**은 DATA-50에서 공식게임route와AppStore ID로정확히게임식별완료. OTT첫공개에서제외하며 Academy와합치지않는다. 같은정체성조사를반복하지말고 새TVING5개미정후보의정확한일자를확보한다. ABCmouse/Thomas & Friends: Whistle & Go/Bad Dinosaurs는 공식 도움말상 게임이다. KPop2개는영상모음집, Sesame Volume4는시즌4 근거가 아니며 WWE는레슬링 묶음이므로 OTT첫공개로 자동 게시하지 않는다.
+3. **PAW Patrol: The Game**은 DATA-50에서 공식게임route와AppStore ID로정확히게임식별완료. OTT첫공개에서제외하며 Academy와합치지않는다. 같은정체성조사를반복하지말고 문무 TVING 11/14는 DATA-51에서 게시했다. 남은 뜨거운 안녕·보스의 노골적 취향·내 새끼의 연애3·브라더스 4개의 정확한 TVING 첫날을 확보한다. ABCmouse/Thomas & Friends: Whistle & Go/Bad Dinosaurs는 공식 도움말상 게임이다. KPop2개는영상모음집, Sesame Volume4는시즌4 근거가 아니며 WWE는레슬링 묶음이므로 OTT첫공개로 자동 게시하지 않는다.
 4. **이런, 북극!**은KR11/05 vsTMDB시즌2 09/08, **필리핀의 크리스마스 선물**은KR11/26 vsTMDB시즌1 12/03 차이가 남았다. 다른 날짜차이 건도 한국첫제공일/입점일/극장·해외방영일을 분리한다. arrival 유형은별도ADR/계약/migration/iOS 검토가 필요하다.
 5. TVING/Disney+/Coupang 한국 공식 원천을 확대하고 근거가 있는 후보만review→고정mapping→로컬publish→SQL/API/멱등성 확인한다. Mike Ward 대체제목과 Nate 상세날짜/출연진은 새 공식 근거나 원천갱신이 있을 때 재조회한다. 클라우드·실폰·독립 검증은 실제 실행 전에 완료로 표현하지 않는다.
 
@@ -95,7 +102,7 @@ backend 원본:
 - scripts/enrich-netflix-identity-aliases.mjs 및 tests/netflix-identity-aliases.test.mjs:영문 별칭의 읽기 전용 TMDB대조, 합성 경계 검사.
 - data/reference/netflix-identity-tmdb-crosscheck-2026-11-12.json:실TMDB관측(오류/잘림 유지).
 - data/curated/netflix-kr-reviewed-identities-2026-11-12.json:11개 수동review·TMDBID·고정mapping.
-- data/curated/ott-reviewed-mappings.json:현재전체63개 고정 매핑(DATA-45때55개,DATA-46때57개,DATA-47때62개). 후보state는Git제외이므로 새 환경은 원본75개lineup bridge와 각 curated review로 복원한다.
+- data/curated/ott-reviewed-mappings.json:현재전체64개 고정 매핑(DATA-45때55개,DATA-46때57개,DATA-47때62개,DATA-49때63개). 후보state는Git제외이므로 새 환경은 원본75개lineup bridge와 각 curated review로 복원한다.
 - data/reference/netflix-identity-publication-evidence-2026-11-12.json:작성자SQL/API/재게시 증거. 독립 정답fixture·verdict가 아니다.
 
 ```sh
