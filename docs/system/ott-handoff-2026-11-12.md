@@ -1,9 +1,15 @@
-# GODIEOR OTT 수집·게시 인계 · 2026-11-13 (DATA-47 반영)
+# GODIEOR OTT 수집·게시 인계 · 2026-11-13 (DATA-48 반영)
+
+## DATA-48 기록 검산·Node24 고정소스·다큐 지원 (2026-11-13)
+
+- 원본 backend `docs/tasks/DATA-48-ott-support-alignment.md`, evidence/data48. 실제KR11~12월4OTT60건/고정매핑62건 재검산, 신규게시0. 사용자 영화·시리즈·예능·다큐 확정에 따라 product/검토형태/정규화/새migration/API분류/iOS다큐배지 구현. 실제개발DB migration/다큐후보게시 미실행.
+- 검증기 ESM누락·가상수집smoke설정 수정, 계약manifest/소비자참조/options버전 동기화(draft.4). Node24 고정HEAD 서버154/154, verifier109/109, unsigned iOS/임시DB migration·반복수집/API/다큐DDL12경계/Swift해석 성공. 검사HEAD·digest는원본카드. 기존dirty포함 Node22결과와 구분.
+- 최종runner ERROR/exit3: secret-check가 실제키가 아닌runtime 환경변수참조1건을탐지(판정유지), 필수4항목SKIPPED/독립review대기/acceptance미승인. 독립PASS·OS격리·클라우드·최신실폰관찰 아님. 다음은literal규칙검토와로컬migration후다큐검토게시, 다른OTT공식근거확대. 기존개인dirty보존, 담당해제.
 
 ## 읽는 순서와 작업 경계
 
 1. AGENTS.md, app docs/system/status.md, docs/system/handoff.md.
-2. 이 문서, backend docs/tasks/DATA-47-netflix-official-recovery.md.
+2. 이 문서, backend docs/tasks/DATA-48-ott-support-alignment.md, DATA-47-netflix-official-recovery.md.
 3. 이전 근거가 필요하면 DATA-46-netflix-search-disambiguation.md, DATA-45-netflix-official-identities.md, DATA-43-netflix-reviewed-batch.md, DATA-44-netflix-review-backlog.md.
 
 DATA-47 시작 기준: app `81d1d20` / backend `f7480e4` / verifier `b3c9721`. 작업 브랜치는 세 곳 모두 `codex/data47-netflix-official-recovery`다. 현재 HEAD는 각 저장소에서 다시 조회한다. 기존 app 개인 signing pbxproj, backend .env.example/package.json과 audit 관련 미추적 4개 파일은 보존했다. 공통 status/handoff 원본은 app이고 backend/verifier 사본을 동일하게 유지한다. 동시 작업은 별도 브랜치/worktree로 분리한다.
