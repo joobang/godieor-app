@@ -1,4 +1,10 @@
-# GODIEOR OTT 수집·게시 인계 · 2026-11-13 (DATA-48 반영)
+# GODIEOR OTT 수집·게시 인계 · 2026-11-13 (DATA-49 반영)
+
+## DATA-49 다큐 시리즈 1건 로컬 게시 (2026-11-13)
+
+- 원본 backend `docs/tasks/DATA-49-reviewed-documentary.md`, evidence/data49. 로컬DB에 기존다큐migration적용 후 `캐런 리드 재판` Netflix KR11/23·시즌1·documentary/series를명시검토해게시. 같은11~12월KR4OTT60→61, Netflix11월54, 연중전체매핑/이벤트63. 신규1건date_only/instantNULL. 기존62개event전체row불변확인.
+- SQL·임시API200/61행/다큐상세·날짜·시즌·출처·달력확인. 재게시이벤트63/신규변경이력1유지. Node24추적CJS+ESM154/154(working tree검사,기존미추적제외). 런타임코드/계약/migration파일/앱변경없음. 공식KR날짜는11/12저장관측,오늘공식Tudum·title에서시리즈형식/날짜재대조.
+- DATA-48 secret-rule환경변수참조1탐지·SKIPPED/ERROR는미해결그대로, 신규독립runner/실폰/클라우드/OS격리미실행. 다음: 다른OTT공식근거확대/PAW정체성/날짜의미검토·독립finding검토. 기존개인dirty보존,담당해제.
 
 ## DATA-48 기록 검산·Node24 고정소스·다큐 지원 (2026-11-13)
 
@@ -9,7 +15,7 @@
 ## 읽는 순서와 작업 경계
 
 1. AGENTS.md, app docs/system/status.md, docs/system/handoff.md.
-2. 이 문서, backend docs/tasks/DATA-48-ott-support-alignment.md, DATA-47-netflix-official-recovery.md.
+2. 이 문서, backend docs/tasks/DATA-49-reviewed-documentary.md, DATA-48-ott-support-alignment.md.
 3. 이전 근거가 필요하면 DATA-46-netflix-search-disambiguation.md, DATA-45-netflix-official-identities.md, DATA-43-netflix-reviewed-batch.md, DATA-44-netflix-review-backlog.md.
 
 DATA-47 시작 기준: app `81d1d20` / backend `f7480e4` / verifier `b3c9721`. 작업 브랜치는 세 곳 모두 `codex/data47-netflix-official-recovery`다. 현재 HEAD는 각 저장소에서 다시 조회한다. 기존 app 개인 signing pbxproj, backend .env.example/package.json과 audit 관련 미추적 4개 파일은 보존했다. 공통 status/handoff 원본은 app이고 backend/verifier 사본을 동일하게 유지한다. 동시 작업은 별도 브랜치/worktree로 분리한다.
@@ -47,12 +53,10 @@ DATA-47 시작 기준: app `81d1d20` / backend `f7480e4` / verifier `b3c9721`. �
 - 알리시아의 법은 videoID82013595→시리즈82013594, 공식 시즌1/TVSeries와 TMDB tv338562 시즌1 11/11이 일치해 기존 시즌1 검토를 재확인했다. 중복 게시하지 않았다.
 - 오버액션 갱은 공식KR11/05, 가능한 사랑은11/06을 유지한다. TMDB 극장/해외 날짜로 덮어쓰지 않는다. 날짜 차이가 있는 작품을 이번에 신규 게시하지 않았다.
 
-## 다음 작업 순서 (DATA-48 이후)
+## 다음 작업 순서 (DATA-49 이후)
 
-다큐 지원 구현과 제품 범위 확정은 DATA-48에서 완료했다. 아래 이전 계획 중 유형 설계는 완료된 단계이며, 다음은 로컬 DB에 새 migration 적용 후 documentaryFormat=series를 명시한 캐런 리드 검토·매핑·게시·SQL/API 확인이다. 비밀 검사 규칙의 runtime 참조 탐지 검토와 독립 필수 검사는 별도로 남아 있다. DATA-48 Node24 고정HEAD 154개와 과거 Node22 dirty 포함 154개는 구성·SHA가 다르다.
-
-1. 세 저장소 HEAD/dirty와 후보state, 로컬DB 준비를 확인하고 같은 기간/KR/provider/4서비스 조건으로60건을 재측정한다. 개인 signing/환경 파일과 기존 미추적 감사 도구를 보존한다.
-2. **다큐 게시 유형 지원**의 제품 범위·API 계약·정규화·review 입력·iOS 표시 변경안을 검토한다. 캐런 리드 재판을 기존 다른 분류로 재명명해 게시하지 않는다. 현재 근거와 거부 사례는 DATA-47, 지원 유형 경계는 backend/docs/reviewed-publish.md, 구현 담당 학습 연결은 LEARN-0011이다. 독립 승인으로 취급하지 않는다.
+1. 세 저장소 HEAD/dirty와 후보state/로컬DB를 확인하고 같은KR/11~12월/provider/4서비스61건을기준으로진행한다. 개인설정·미추적도구를보존한다.
+2. 다큐지원설계(DATA-48)와로컬migration/캐런리드검토·게시(DATA-49)는완료했다. 다른OTT공식한국최초공개근거를확대하고충분한경우에만추가review→고정mapping→게시→SQL/API/멱등성확인한다. secret룰runtime참조탐지검토/독립필수검사는별도미완료다.
 3. **PAW Patrol: The Game**의 정확한 작품/게임 식별 근거를 찾는다. PAW Patrol Academy는 다른 이름이므로 자동 별칭으로 연결하지 않는다. ABCmouse/Thomas & Friends: Whistle & Go/Bad Dinosaurs는 공식 도움말상 게임이다. KPop2개는영상모음집, Sesame Volume4는시즌4 근거가 아니며 WWE는레슬링 묶음이므로 OTT첫공개로 자동 게시하지 않는다.
 4. **이런, 북극!**은KR11/05 vsTMDB시즌2 09/08, **필리핀의 크리스마스 선물**은KR11/26 vsTMDB시즌1 12/03 차이가 남았다. 다른 날짜차이 건도 한국첫제공일/입점일/극장·해외방영일을 분리한다. arrival 유형은별도ADR/계약/migration/iOS 검토가 필요하다.
 5. TVING/Disney+/Coupang 한국 공식 원천을 확대하고 근거가 있는 후보만review→고정mapping→로컬publish→SQL/API/멱등성 확인한다. Mike Ward 대체제목과 Nate 상세날짜/출연진은 새 공식 근거나 원천갱신이 있을 때 재조회한다. 클라우드·실폰·독립 검증은 실제 실행 전에 완료로 표현하지 않는다.
@@ -66,7 +70,7 @@ backend 원본:
 - docs/tasks/DATA-47-netflix-official-recovery.md:16건 복구·분류·5건 게시·다큐 유형 거부·실제 명령/digest.
 - data/reference/netflix-official-recovery-2026-11-13.json:공식 브라우저redirect/형식·게임도움말·보류 근거.
 - data/reference/netflix-official-recovery-tmdb-2026-11-13.json:8건실조회,4건추가배우/국가 대조 입력과결과.
-- data/curated/netflix-kr-reviewed-recovered-2026-11-13.json:5개수동review·고정mapping, 유형미지원1개blockedItems. 전체 ott-reviewed-mappings.json은62개다.
+- data/curated/netflix-kr-reviewed-recovered-2026-11-13.json:5개수동review·고정mapping, 유형미지원1개blockedItems. DATA-47 당시전체는62개이며 현재63개다.
 - data/reference/netflix-official-recovery-publication-evidence-2026-11-13.json:16건최종상태·preflight거부·SQL/API/재게시작성자증거.
 - docs/reviewed-publish.md:후보 분류와 게시 지원 유형의 차이. verifier/docs/learning/entries/0011-reviewed-candidates-to-events.md에구현담당관측연결.
 
@@ -75,7 +79,7 @@ backend 원본:
 - docs/tasks/DATA-46-netflix-search-disambiguation.md:6건의 조사·보류 사유,2건 게시, 실제 명령과고정digest.
 - scripts/disambiguate-netflix-tmdb.mjs / tests/netflix-disambiguation.test.mjs:공식 배우·국가·완료한 검색·상세/시즌 날짜 대조, 자동 게시 없음.
 - data/reference/netflix-disambiguation-input-2026-11-13.json 및 netflix-disambiguation-report-2026-11-13.json:공식 사실과 실TMDB보고서.
-- data/curated/netflix-kr-reviewed-disambiguated-2026-11-13.json:신규2건의수동review·고정mapping. DATA-46 당시전체57개였으며 현재 ott-reviewed-mappings.json은62개다.
+- data/curated/netflix-kr-reviewed-disambiguated-2026-11-13.json:신규2건의수동review·고정mapping. DATA-46 당시전체57개였으며 현재 ott-reviewed-mappings.json은63개다.
 - data/reference/netflix-disambiguation-publication-evidence-2026-11-13.json:작성자SQL/API/멱등성증거.
 
 아래 DATA-45 파일은 이전 관측·복원 경로로 보존한다:
@@ -85,7 +89,7 @@ backend 원본:
 - scripts/enrich-netflix-identity-aliases.mjs 및 tests/netflix-identity-aliases.test.mjs:영문 별칭의 읽기 전용 TMDB대조, 합성 경계 검사.
 - data/reference/netflix-identity-tmdb-crosscheck-2026-11-12.json:실TMDB관측(오류/잘림 유지).
 - data/curated/netflix-kr-reviewed-identities-2026-11-12.json:11개 수동review·TMDBID·고정mapping.
-- data/curated/ott-reviewed-mappings.json:현재전체62개 고정 매핑(DATA-45때55개,DATA-46때57개). 후보state는Git제외이므로 새 환경은 원본75개lineup bridge와 각 curated review로 복원한다.
+- data/curated/ott-reviewed-mappings.json:현재전체63개 고정 매핑(DATA-45때55개,DATA-46때57개,DATA-47때62개). 후보state는Git제외이므로 새 환경은 원본75개lineup bridge와 각 curated review로 복원한다.
 - data/reference/netflix-identity-publication-evidence-2026-11-12.json:작성자SQL/API/재게시 증거. 독립 정답fixture·verdict가 아니다.
 
 ```sh
