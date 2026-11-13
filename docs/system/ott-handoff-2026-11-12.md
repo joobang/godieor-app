@@ -1,4 +1,10 @@
-# GODIEOR OTT 수집·게시 인계 · 2026-11-13 (DATA-51 반영)
+# GODIEOR OTT 수집·게시 인계 · 2026-11-13 (DATA-52 반영)
+
+## DATA-52 뜨거운 안녕 공식 공개일 확인·로컬 게시 (2026-11-13)
+
+- 원본 backend `docs/tasks/DATA-52-tving-release-evidence.md`, evidence/data52. 인증TVING공식SNS원문에서11/11독점공개와연도문맥을직접확인,공식작품P001793179과대조후1건게시. 게시시각을공개시각으로쓰지않고date_only/seasonNULL보존.
+- 같은KR11~12월4OTT62→63,연중65매핑/이벤트. SQL·임시API200/63행/신규ID·공식작품출처확인. 재게시이벤트65/신규변경1유지,기존64개event전체행불변. Node24추적CJS+ESM156/156. source별staging176/반복신규0.
+- 나머지TVING3개(보스의노골적취향/내새끼의연애3/브라더스)는정확한첫날보류. 앱/코드/계약/migration/승인기준변경없음. 신규fixed runner/실폰/클라우드/독립검증미실행,DATA-51전체ERROR유지. 다음은남은3개와기존목표OTT미확인근거보강. 개인dirty보존·담당해제.
 
 ## DATA-51 문무 티빙 공개일 확인·로컬 게시 (2026-11-13)
 
@@ -28,7 +34,7 @@
 ## 읽는 순서와 작업 경계
 
 1. AGENTS.md, app docs/system/status.md, docs/system/handoff.md.
-2. 이 문서, backend docs/tasks/DATA-51-tving-dates.md, DATA-50-official-gap-review.md.
+2. 이 문서, backend docs/tasks/DATA-52-tving-release-evidence.md, DATA-51-tving-dates.md.
 3. 이전 근거가 필요하면 DATA-46-netflix-search-disambiguation.md, DATA-45-netflix-official-identities.md, DATA-43-netflix-reviewed-batch.md, DATA-44-netflix-review-backlog.md.
 
 DATA-47 시작 기준: app `81d1d20` / backend `f7480e4` / verifier `b3c9721`. 작업 브랜치는 세 곳 모두 `codex/data47-netflix-official-recovery`다. 현재 HEAD는 각 저장소에서 다시 조회한다. 기존 app 개인 signing pbxproj, backend .env.example/package.json과 audit 관련 미추적 4개 파일은 보존했다. 공통 status/handoff 원본은 app이고 backend/verifier 사본을 동일하게 유지한다. 동시 작업은 별도 브랜치/worktree로 분리한다.
@@ -66,11 +72,11 @@ DATA-47 시작 기준: app `81d1d20` / backend `f7480e4` / verifier `b3c9721`. �
 - 알리시아의 법은 videoID82013595→시리즈82013594, 공식 시즌1/TVSeries와 TMDB tv338562 시즌1 11/11이 일치해 기존 시즌1 검토를 재확인했다. 중복 게시하지 않았다.
 - 오버액션 갱은 공식KR11/05, 가능한 사랑은11/06을 유지한다. TMDB 극장/해외 날짜로 덮어쓰지 않는다. 날짜 차이가 있는 작품을 이번에 신규 게시하지 않았다.
 
-## 다음 작업 순서 (DATA-51 이후)
+## 다음 작업 순서 (DATA-52 이후)
 
-1. 세 저장소 HEAD/dirty와 후보state/로컬DB를 확인하고 같은KR/11~12월/provider/4서비스62건(연중64매핑)을기준으로진행한다. 개인설정·미추적도구를보존한다.
+1. 세 저장소 HEAD/dirty와 후보state/로컬DB를 확인하고 같은KR/11~12월/provider/4서비스63건(연중65매핑)을기준으로진행한다. 개인설정·미추적도구를보존한다.
 2. 다큐지원설계(DATA-48)와로컬migration/캐런리드검토·게시(DATA-49)는완료했다. 다른OTT공식한국최초공개근거를확대하고충분한경우에만추가review→고정mapping→게시→SQL/API/멱등성확인한다. secret룰runtime참조탐지검토/독립필수검사는별도미완료다.
-3. **PAW Patrol: The Game**은 DATA-50에서 공식게임route와AppStore ID로정확히게임식별완료. OTT첫공개에서제외하며 Academy와합치지않는다. 같은정체성조사를반복하지말고 문무 TVING 11/14는 DATA-51에서 게시했다. 남은 뜨거운 안녕·보스의 노골적 취향·내 새끼의 연애3·브라더스 4개의 정확한 TVING 첫날을 확보한다. ABCmouse/Thomas & Friends: Whistle & Go/Bad Dinosaurs는 공식 도움말상 게임이다. KPop2개는영상모음집, Sesame Volume4는시즌4 근거가 아니며 WWE는레슬링 묶음이므로 OTT첫공개로 자동 게시하지 않는다.
+3. **PAW Patrol: The Game**은 DATA-50에서 공식게임route와AppStore ID로정확히게임식별완료. OTT첫공개에서제외하며 Academy와합치지않는다. 같은정체성조사를반복하지말고 문무 TVING 11/14는 DATA-51에서 게시했다. 뜨거운 안녕 TVING11/11은 DATA-52에서 게시했다. 남은 보스의 노골적 취향·내 새끼의 연애3·브라더스 3개의 정확한 TVING 첫날을 확보한다. ABCmouse/Thomas & Friends: Whistle & Go/Bad Dinosaurs는 공식 도움말상 게임이다. KPop2개는영상모음집, Sesame Volume4는시즌4 근거가 아니며 WWE는레슬링 묶음이므로 OTT첫공개로 자동 게시하지 않는다.
 4. **이런, 북극!**은KR11/05 vsTMDB시즌2 09/08, **필리핀의 크리스마스 선물**은KR11/26 vsTMDB시즌1 12/03 차이가 남았다. 다른 날짜차이 건도 한국첫제공일/입점일/극장·해외방영일을 분리한다. arrival 유형은별도ADR/계약/migration/iOS 검토가 필요하다.
 5. TVING/Disney+/Coupang 한국 공식 원천을 확대하고 근거가 있는 후보만review→고정mapping→로컬publish→SQL/API/멱등성 확인한다. Mike Ward 대체제목과 Nate 상세날짜/출연진은 새 공식 근거나 원천갱신이 있을 때 재조회한다. 클라우드·실폰·독립 검증은 실제 실행 전에 완료로 표현하지 않는다.
 
@@ -102,7 +108,7 @@ backend 원본:
 - scripts/enrich-netflix-identity-aliases.mjs 및 tests/netflix-identity-aliases.test.mjs:영문 별칭의 읽기 전용 TMDB대조, 합성 경계 검사.
 - data/reference/netflix-identity-tmdb-crosscheck-2026-11-12.json:실TMDB관측(오류/잘림 유지).
 - data/curated/netflix-kr-reviewed-identities-2026-11-12.json:11개 수동review·TMDBID·고정mapping.
-- data/curated/ott-reviewed-mappings.json:현재전체64개 고정 매핑(DATA-45때55개,DATA-46때57개,DATA-47때62개,DATA-49때63개). 후보state는Git제외이므로 새 환경은 원본75개lineup bridge와 각 curated review로 복원한다.
+- data/curated/ott-reviewed-mappings.json:현재전체65개 고정 매핑(DATA-45때55개,DATA-46때57개,DATA-47때62개,DATA-49때63개,DATA-51때64개). 후보state는Git제외이므로 새 환경은 원본75개lineup bridge와 각 curated review로 복원한다.
 - data/reference/netflix-identity-publication-evidence-2026-11-12.json:작성자SQL/API/재게시 증거. 독립 정답fixture·verdict가 아니다.
 
 ```sh
