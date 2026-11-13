@@ -1,14 +1,23 @@
-# GODIEOR OTT 수집·게시 인계 · 2026-11-12 (DATA-45 반영)
+# GODIEOR OTT 수집·게시 인계 · 2026-11-13 (DATA-46 반영)
 
 ## 읽는 순서와 작업 경계
 
 1. AGENTS.md, app docs/system/status.md, docs/system/handoff.md.
-2. 이 문서, backend docs/tasks/DATA-45-netflix-official-identities.md.
-3. 이전 근거가 필요하면 DATA-43-netflix-reviewed-batch.md, DATA-44-netflix-review-backlog.md.
+2. 이 문서, backend docs/tasks/DATA-46-netflix-search-disambiguation.md.
+3. 이전 근거가 필요하면 DATA-45-netflix-official-identities.md, DATA-43-netflix-reviewed-batch.md, DATA-44-netflix-review-backlog.md.
 
-DATA-45 시작 기준: app `ed5453c` / backend `fd76c95` / verifier `91dfc9e`. 작업 브랜치는 세 곳 모두 `codex/data45-netflix-identities`다. 현재 HEAD는 각 저장소에서 다시 조회한다. 기존 app 개인 signing pbxproj, backend .env.example/package.json과 audit 관련 미추적 4개 파일은 보존했다. 공통 status/handoff 원본은 app이고 backend/verifier 사본을 동일하게 유지한다. 동시 작업은 별도 브랜치/worktree로 분리한다.
+DATA-46 시작 기준: app `6f47a53` / backend `5171746` / verifier `d097c10`. 작업 브랜치는 세 곳 모두 `codex/data46-netflix-disambiguation`다. 현재 HEAD는 각 저장소에서 다시 조회한다. 기존 app 개인 signing pbxproj, backend .env.example/package.json과 audit 관련 미추적 4개 파일은 보존했다. 공통 status/handoff 원본은 app이고 backend/verifier 사본을 동일하게 유지한다. 동시 작업은 별도 브랜치/worktree로 분리한다.
 
-## 최신 실제 결과
+## 최신 실제 결과 · DATA-46 (2026-11-13)
+
+- 기존 검색잘림4건과 제목 미발견2건을 공식 배우·제작국가·연도로 재대조했다. 연도 제한 검색은 모두 끝까지 확인했고, 6건 결과는 날짜/정체성 일치2, 정체성 일치·날짜차이2, 상세 정체성 미확인1, 제목 미발견1이다.
+- **앨런**(movie1518204, 공식 배우3명/AU,11/12)과 **고르돈**(tv340280, 공식 배우3명/AR,시즌1,11/18)을 수동 검토·로컬 게시했다. 한국 날짜는 DATA-43의 공식 KR 목록 관측을 유지했고, 해외 보도자료만으로 생성하지 않았다.
+- 같은11~12월/KR/4개OTT/ott_reviewed 로컬 범위 **53→55건(+2)**, Netflix11월48건, 연중 전체 고정 매핑/이벤트57건이다. 신규2건은date_only/instant_at=NULL, 시즌null/1이다.
+- SQL과 임시 로컬API(HTTP200/55행/신규2ID) 확인 후 임시API를 종료했다. 재게시 전후 이벤트57/신규2건의변경이력2로 동일했다. Node22.22.3 작성자 검사154/154 통과(기존dirty포함), 권장Node24/독립검증/실폰/클라우드 미실행이다.
+- My Best Friend의 미국 동명작과 The Child의 라트비아 동명작을 배우/국가로 배제했다. 맞는 브라질/스페인 작품을 찾았지만 각각TMDB09/03 vsKR11/02, TMDB11/13 vsKR11/27이라 게시하지 않았다.
+- Nate Bargatze 후보1824177은 상세 날짜·출연진이 비어 있어 보류했다. Mike Ward: Modest는 연도 제한/해제 검색에서 정확한 제목을 찾지 못했다. 과거4건을 더 이상 검색잘림 상태로 표시하지 않는다.
+
+## 이전 DATA-45 실측 · 2026-11-12
 
 - DATA-45에서 로컬 PostgreSQL의 **2026년 11~12월 KR 4개 OTT 일정 42→53건(+11)**을 실제 SQL로 확인했다. Netflix 11월은35→46건, 연중 전체 ott_reviewed 고정 매핑/이벤트는44→55건이다. 신규11건은 영화·예능·시리즈로 검토한 작품이며 시리즈 시즌은 실제 확인된1, 영화·단독 스페셜은null을 보존했다. 모두 date_only이고 instant_at은NULL이다.
 - 임시 로컬 API의 GET /v1/events 기간 조회는HTTP200/53행이며 신규11개ID가 모두 포함됐다. 검사 후 임시API를 종료했다. 기존 서버·iPhone 설치는 변경하지 않았다.
@@ -25,9 +34,9 @@ DATA-45 시작 기준: app `ed5453c` / backend `fd76c95` / verifier `91dfc9e`. �
 
 ## 다음 작업 순서
 
-1. 세 저장소 HEAD/dirty와 후보state, 로컬 DB 준비를 확인한다. 비밀값은 출력하지 않는다. 날짜 범위와 provider 조건을 고정해53건을 재측정할 수 있다.
+1. 세 저장소 HEAD/dirty와 후보state, 로컬 DB 준비를 확인한다. 비밀값은 출력하지 않는다. 날짜 범위와 provider 조건을 고정해55건을 재측정할 수 있다.
 2. **공식 상세 실패16건**을 작품ID와 공식 접근 가능한 자료로 확인한다. 게임/보너스/회차/스포츠를 제목만으로 영화·드라마로 분류하지 않는다. www.netflix.com robots의 일반bot 제한을 확인했으므로 임의의 직접 상세 스크래핑 배치를 재개하지 않는다.
-3. **TMDB 제목 미발견2건**(Mike Ward: Modest, Nate Bargatze: Good For Nathan)은 공식 제목 변형과 대체 제목을 확인한다. **검색잘림4건**(My Best Friend, Allen, Gordon, The Child)은 연도·배우·제작국가로 정체성을 좁힌다. 후보 날짜가 같다는 이유로 자동 승인하지 않는다.
+3. **Mike Ward: Modest**는 공식 대체 제목을 확인한다. **Nate Bargatze: Good For Nathan**은 후보1824177 상세 날짜·출연진의 보강 여부를 확인한다. 기존 검색잘림4건은 DATA-46에서2건 게시/2건 날짜차이로 정리했으므로 처음부터 같은 검색을 반복하지 않는다. 동명 작품은 배우·국가로 구분하고 원천 갱신 시 결과를 재확인한다.
 4. **날짜 차이11건**은 같은 작품/시즌인지 먼저 확인하고 한국 플랫폼 첫 제공일과 극장/해외방송 날짜를 구분한다. arrival 유형 분리는ADR/API/migration/iOS 영향을 검토한 뒤 별도 구현한다.
 5. 공식 근거를 검토한 후보만 review→고정 mapping→로컬 publish하고 전후 SQL/API·멱등성을 확인한다. TVING/Disney+/Coupang 공식 원천 확대도 남아 있다. 클라우드·실폰·독립 검증은 실제 실행 전 완료로 표현하지 않는다.
 
@@ -37,25 +46,33 @@ StreamPick 참고11건은 일치7/공식 날짜 차이1/한국OTT날짜 미확�
 
 backend 원본:
 
+- docs/tasks/DATA-46-netflix-search-disambiguation.md:6건의 조사·보류 사유,2건 게시, 실제 명령과고정digest.
+- scripts/disambiguate-netflix-tmdb.mjs / tests/netflix-disambiguation.test.mjs:공식 배우·국가·완료한 검색·상세/시즌 날짜 대조, 자동 게시 없음.
+- data/reference/netflix-disambiguation-input-2026-11-13.json 및 netflix-disambiguation-report-2026-11-13.json:공식 사실과 실TMDB보고서.
+- data/curated/netflix-kr-reviewed-disambiguated-2026-11-13.json:신규2건의수동review·고정mapping. 전체 ott-reviewed-mappings.json은57개다.
+- data/reference/netflix-disambiguation-publication-evidence-2026-11-13.json:작성자SQL/API/멱등성증거.
+
+아래 DATA-45 파일은 이전 관측·복원 경로로 보존한다:
+
 - docs/tasks/DATA-45-netflix-official-identities.md:44건 조사표,11건 게시표, 실제 명령·검사·digest.
 - data/reference/netflix-official-identities-2026-11-12.json:공식ID에 묶인 수동 상세 관측. 영문 표시명은 제작 원제라는 뜻이 아니다.
 - scripts/enrich-netflix-identity-aliases.mjs 및 tests/netflix-identity-aliases.test.mjs:영문 별칭의 읽기 전용 TMDB대조, 합성 경계 검사.
 - data/reference/netflix-identity-tmdb-crosscheck-2026-11-12.json:실TMDB관측(오류/잘림 유지).
 - data/curated/netflix-kr-reviewed-identities-2026-11-12.json:11개 수동review·TMDBID·고정mapping.
-- data/curated/ott-reviewed-mappings.json:전체55개 고정 매핑. 후보state는Git제외이므로 새 환경은 원본75개lineup bridge와 각 curated review로 복원한다.
+- data/curated/ott-reviewed-mappings.json:현재전체57개 고정 매핑(DATA-45때55개). 후보state는Git제외이므로 새 환경은 원본75개lineup bridge와 각 curated review로 복원한다.
 - data/reference/netflix-identity-publication-evidence-2026-11-12.json:작성자SQL/API/재게시 증거. 독립 정답fixture·verdict가 아니다.
 
 ```sh
 cd /Users/dojoohwan/workspace/godieor-backend
-node --test tests/netflix-identity-aliases.test.mjs
+node --test tests/netflix-disambiguation.test.mjs
 # 키가 설정된 경우에만 실행하는 읽기 전용 실조회. 출력 파일은 새 경로 사용.
-node --env-file=.env scripts/enrich-netflix-identity-aliases.mjs data/reference/netflix-official-identities-2026-11-12.json /private/tmp/godieor-next-identity-crosscheck.json --live
+node --env-file=.env scripts/disambiguate-netflix-tmdb.mjs data/reference/netflix-disambiguation-input-2026-11-13.json /private/tmp/godieor-next-disambiguation.json --live
 # 로컬 DB 읽기 전용 비교:
 node --env-file=.env scripts/audit-ott-published.mjs data/reference/streampick-2026-11-12-gap11.json
 # 검토·고정 매핑·후보state가 준비된 경우에만 의도적으로 로컬 DB에 게시:
 # node --env-file=.env dist/src/cli/publish-reviewed.js --file data/curated/ott-reviewed-mappings.json
 ```
 
-권장Node는package.json engines 기준이다. DATA-45의Node22 결과를 권장Node24 검증으로 표현하지 않는다. 전체149개 검사는 기존 dirty/미추적 파일을 포함한 당시 작업 트리 기준이다.
+권장Node는package.json engines 기준이다. DATA-46의Node22 결과를 권장Node24 검증으로 표현하지 않는다. 전체154개 검사는 기존 dirty/미추적 파일을 포함한 당시 작업 트리 기준이다.
 
-요구사항 PROD-005/006/007/009(GD-005/006/007/009). 계약0.1.0-draft.2 digest `e2e368a3b285ab0dae7d5f1d6f497c3de28ca0c099b2da10344a0a1a857e515c`, migration집합 digest `a6009a82ea00e08cfefa5d294ed40e2f5fb30a0e6e6807bf22e3db79217bb2e7`은 DATA-45에서 재확인했고 변경하지 않았다. verifier acceptance는draft/미승인 그대로다. 새로운 독립review에는 구현 대화·작성자 판단을 정답으로 주입하지 않는다. 담당codex-data45-01은 종료 시 해제한다.
+요구사항 PROD-005/006/007/009(GD-005/006/007/009). 계약0.1.0-draft.2 digest `e2e368a3b285ab0dae7d5f1d6f497c3de28ca0c099b2da10344a0a1a857e515c`, migration집합 digest `a6009a82ea00e08cfefa5d294ed40e2f5fb30a0e6e6807bf22e3db79217bb2e7`은 DATA-46에서 재확인했고 변경하지 않았다. verifier acceptance는draft/미승인 그대로다. 새로운 독립review에는 구현 대화·작성자 판단을 정답으로 주입하지 않는다. 담당codex-data46-01은 종료 시 해제한다.
