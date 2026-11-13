@@ -1,0 +1,7 @@
+APP-AUTH-13 fixed-source unsigned iOS build
+source: dc3bab01d675e1fff28c8265dcf6d07606866992 (git archive, personal pbxproj excluded)
+exit: 0
+result: ** BUILD SUCCEEDED **
+Warnings: CoreSimulator runtime/service unavailable; AppIntents metadata skipped. No simulator launch/UI assertion.
+local full log: /private/tmp/godieor-account-flow/fixed-ios-build.log
+full log SHA256: 82861c365549f8b28bc45062e80041c6eaec022780e107b6e8f42ac5c577333e

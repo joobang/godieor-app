@@ -17,7 +17,7 @@ backend는 로컬 PostgreSQL·Prisma·공개 API·가상 수집 및 검토된 OT
 시뮬레이터의 기본 API는 `http://localhost:3000/v1`이다. 로컬 backend가 실행 중이어야 일정이 표시된다. 앱은 먼저 `/catalog/options`에서 지원 국가·시간대·OTT 서비스·게임 기기 옵션을 받아 필터 선택과 월간/날짜별/상세 조회에 반영한다. Xcode Scheme 실행 환경 변수 `GODIEOR_API_BASE_URL`로 주소를 바꿀 수 있다. 실기기는 Mac의 localhost가 아닌 휴대폰에서 접근 가능한 API 주소와 HTTPS 구성이 필요하다. 분야/지역/시간대/서비스/기기 선택은 기기에 저장되며, 로그인하면 현재 필터를 명시적으로 계정에 저장하거나 서버 설정을 다시 불러올 수 있다. 서버 설정 저장은 version 충돌(409)을 감지한다. 일정/작품 찜은 로그인 후 서버에 저장된다. 분야를 전부 끄면 API를 요청하지 않는다.
 
 실기기는 Xcode에서 본인 Personal Team을 선택한다. 저장소에 팀 ID나 인증서를 기록하지 않는다.
-iOS 17 이상, SwiftUI, 외부 패키지 없는 시작점을 유지한다. Google OAuth는 ASWebAuthenticationSession + PKCE + nonce를 사용하고, 서버 서비스 세션은 iOS Keychain(ThisDeviceOnly)에 보관한다. Google iOS OAuth Client ID와 역순 callback scheme을 Xcode Build Settings의 `GODIEOR_GOOGLE_CLIENT_ID`, `GODIEOR_GOOGLE_CALLBACK_SCHEME`에 별도로 설정하고 backend의 `GOOGLE_IOS_CLIENT_ID`와 일치시켜야 한다. Placeholder 값으로는 로그인이 작동하지 않는다. 실제 인증·기기간 동기화는 등록된 Google Client/접속 가능한 HTTPS API가 없어 미검증이다. 계정별 서버 저장과 기기별 로컬 저장은 별개다.
+iOS 17 이상, SwiftUI, 외부 패키지 없는 시작점을 유지한다. Google OAuth는 ASWebAuthenticationSession + PKCE + nonce를 사용하고, 서버 서비스 세션은 iOS Keychain(ThisDeviceOnly)에 보관한다. Google iOS OAuth Client ID와 역순 callback scheme을 Xcode Build Settings의 `GODIEOR_GOOGLE_CLIENT_ID`, `GODIEOR_GOOGLE_CALLBACK_SCHEME`에 별도로 설정하고 backend의 `GOOGLE_IOS_CLIENT_ID`와 일치시켜야 한다. Placeholder 값으로는 로그인이 작동하지 않는다. 사용자가 2026-11-10 iPhone Google 로그인 성공을 보고했다. APP-AUTH-13의 합성 계정 흐름15개 및 unsigned 빌드와 구분하며, 실제 Keychain 복원·기기간 서버 왕복 전체 검증은 미완료다. 계정별 서버 저장과 기기별 로컬 저장은 별개다.
 첫 목표는 로컬 API/DB와 앱의 연결이며, 최종 사용 형태는 본인 iPhone + 클라우드 API/DB다. verifier는 Mac에서 실행한다.
 
 ## 먼저 읽을 문서
@@ -38,3 +38,5 @@ iOS 17 이상, SwiftUI, 외부 패키지 없는 시작점을 유지한다. Googl
 
 웹 전달본 생성: `python3 scripts/export-context.py`. 생성 후 `--check`로 최신 여부를 확인하고
 `work/context/chatgpt-context.md`를 업로드한다. 두 Codex 계정은 같은 저장소의 위 시작점부터 읽는다.
+
+계정 흐름 자체검사는 macOS에서 `sh scripts/check-account-flow.sh`로 실행한다. 실제 앱 AccountState에 합성 HTTP/세션 저장소/인증 결과를 주입하며 실제 Google·Keychain·제품 서버를 사용하지 않는다. 재현·수정 근거는 [APP-AUTH-13](docs/ai/tasks/APP-AUTH-13.md)에 기록한다.
