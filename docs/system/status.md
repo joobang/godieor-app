@@ -424,3 +424,9 @@ backend `b637ecb`: 한국 공식 OTT 목록을 시작점으로 플랫폼/날짜/
 
 - 원본 카드 `docs/tasks/DATA-38-kr-premiere-reviewed-publish.md`. TVING `유일무이 로맨스` 11/09, Disney+ `스타일 워즈` 11/11 최초 공개 교차 검증 후 로컬 `ott_reviewed` 매핑 11→13건 게시. 11~12월 DB 내 11건, 신규 두 건 `published_match` 직접 감사.
 - StreamPick-only 11건 분류는 첫 공개 후보 2, 공식 목록만 4, 날짜 불일치 1, TMDB 날짜+KR 제공처 1, TMDB 날짜만 3. 전체 건수 일치·클라우드 배포·독립 검증 주장 없음. 백엔드 `npm test` 129/129 통과. 기존 dirty 변경 보존.
+## DATA-57 · TMDB 독립 발견 범위 확대/비교 원인 분리 (2026-11-16)
+
+- backend 원본 `docs/tasks/DATA-57-tmdb-parity-root-causes.md`. 기존 StreamPick 참조 52행: 정확 게시 26, 게시 날짜 차이 2, TMDB 시즌/영화 제공처 힌트만 7, 시리즈 제공처 힌트만 14, 플랫폼 미확인 1, 시즌 미발견 2. 과거 독립 TMDB 후보 49/52은 **게시 근거 49건을 의미하지 않음**.
+- backend에 KR 제공처 없는 글로벌 TV 방영일 발견 경로 및 coverage 진단, 참조행을 후보 seed로 사용하지 않는 역감사 CLI를 추가. Node24 관련30/30·`.test.mjs` 전체154/154 통과; CJS 포함 220개 중 219통과·HTTP listen EPERM 1, `npm test` 빌드 삭제 EPERM. 읽기 전용 52행 분석 성공. 실네트워크 재수집/DB 게시/독립 검증은 이번 작업 미실행, 실제 누락 수량 감소는 미측정.
+- 제품/계약/migration/앱 화면/검증 기준 변경 없음. 기존 개인 dirty 보존. 다음은 새 수집 경로 실측 → 공식 KR OTT 최초일 증거 연결 → review/publish → DB/API/참조 재집계.
+

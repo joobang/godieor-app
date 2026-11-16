@@ -416,3 +416,9 @@ backend `b637ecb`: 한국 공식 OTT 목록을 시작점으로 플랫폼/날짜/
 
 - backend 카드 `docs/tasks/DATA-38-kr-premiere-reviewed-publish.md`, 기준 `9e5e48b`. 공식 한국 첫 공개 TVING 11/09 `유일무이 로맨스`, Disney+ 11/11 `스타일 워즈` 두 건 수동 검토 후 `ott_reviewed` 로컬 게시 13건. 11~12월 DB 11건 중 두 건 날짜·시즌 일치. `npm test` 129/129, 독립 verifier/클라우드 미실행.
 - 이후 작업: Netflix 한국 최초 공개 미확정 4건, 공식 날짜 충돌 `오버액션 갱`, TMDB 단독 4건 원천 OTT 확인. 기존 문서 dirty는 이전 사용자 변경으로 보존.
+## DATA-57 인계 (2026-11-16)
+
+- 원본 backend `docs/tasks/DATA-57-tmdb-parity-root-causes.md`. 후보 독립 발견과 게시 근거 격차를 52행으로 분리; KR provider 미등록 글로벌 TV 날짜 발견 경로를 확대했다. 52행 중 게시 정확26/날짜충돌2/provider 단서21/플랫폼미확인1/시즌미발견2. 과거 후보 매칭49.
+- backend Node24 관련30/30 및 `.test.mjs`154/154 성공. CJS 포함 220개 중 219통과·HTTP listen EPERM 1, `npm test` 기존 dist 삭제 EPERM. 실 TMDB 확장 경로, DB/API, 독립 verifier 미실행이므로 후보 증가/정확 게시 증가 미주장. 계약·migration·acceptance 변경 없음.
+- backend 수정 파일은 `scripts/tmdb-date-discovery.mjs`, `scripts/collect-tmdb-release-candidates.mjs`, `scripts/audit-tmdb-parity-causes.mjs`, `tests/tmdb-date-discovery.test.mjs`, `tests/tmdb-parity-causes.test.mjs` 및 작업 카드. 개인 dirty 및 기존 미추적 파일 제외. 다음 작업: 실제 TMDB 재수집/coverage 점검 후 공식 공개 증거로 게시 판단.
+
