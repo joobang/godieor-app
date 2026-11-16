@@ -1,3 +1,9 @@
+## DATA-59 · StreamPick 첫 공개 재검증 인계 (2026-11-16)
+
+- backend 원본 `docs/tasks/DATA-59-first-release-parity-semantics.md`, 증거 `docs/tasks/evidence/data59/first-release-parity-2026-11-16.md`. 52 첫 공개 행과 로컬 68 게시 중 정확26·날짜차이2·미게시24. 일반 회차 제외. 신규 게시0.
+- backend 파서·비교·보고서 개선, Node24 162/162·Python12/12, DB 읽기 성공. StreamPick 실시간 DNS 실패, 참조 저장본만 사용. 다른 dirty 및 앱 개인 서명 유지, 독립 runner/클라우드/폰·계약/승인 변경 없음.
+- 다음 담당: 24건 한국 공식 목표 OTT 시즌별 최초일 증거→검토·게시→DB 재집계. 날짜 차이 2건 공식 KR 원천 우선 유지. 공통 revision DATA-59-2026-11-16.
+
 ## DATA-56 · OTT 애니 지원·기존 분류 전수 보정 (2026-11-16)
 
 - 사용자 확정: ‘애니도 포함해 OTT 전체 대조’. 영화·시리즈·예능·다큐·애니를지원하며일반회차는제외한다. 원본 backend `docs/tasks/DATA-56-ott-animation-support.md`, ADR-021/LEARN-0011·0021.
@@ -427,4 +433,3 @@ backend `b637ecb`: 한국 공식 OTT 목록을 시작점으로 플랫폼/날짜/
 - 원본 backend `docs/tasks/DATA-58-tmdb-sharded-independent-discovery.md`. 요구: OTT 신작/시즌 자동 발견→한국 공식 최초 공개 근거→검토 후 게시. StreamPick 참조 52행은 사후 평가 전용.
 - 이전 실 TMDB 독립 월별 821작품 후보/월별 페이지 잘림 2구간. 글로벌 조회를 날짜 분할하고 상한 100페이지로 실측한 결과 3,303작품, 잘림0, API오류0. Coupang 영화 provider 미등재로 전체 완전성은 미확보. 과거 후보ID 49행은 다시 발견했지만 시즌/OTT 날짜 검증은 별도다.
 - backend Node24 관련32/32, mjs 전체157/157 자체 통과. 새 실제 분할 수집의 결과는 backend 작업 카드에 갱신. 제품 DB 게시/독립 runner/클라우드 미실행. API 계약·migration·verifier 기준 불변, 기존 app signing 및 backend 개인 dirty 제외. 다음은 분할 결과의 시즌 후보화와 공식 KR 최초 공개일 교차검증.
-
