@@ -422,3 +422,9 @@ backend `b637ecb`: 한국 공식 OTT 목록을 시작점으로 플랫폼/날짜/
 - backend Node24 관련30/30 및 `.test.mjs`154/154 성공. CJS 포함 220개 중 219통과·HTTP listen EPERM 1, `npm test` 기존 dist 삭제 EPERM. 실 TMDB 확장 경로, DB/API, 독립 verifier 미실행이므로 후보 증가/정확 게시 증가 미주장. 계약·migration·acceptance 변경 없음.
 - backend 수정 파일은 `scripts/tmdb-date-discovery.mjs`, `scripts/collect-tmdb-release-candidates.mjs`, `scripts/audit-tmdb-parity-causes.mjs`, `tests/tmdb-date-discovery.test.mjs`, `tests/tmdb-parity-causes.test.mjs` 및 작업 카드. 개인 dirty 및 기존 미추적 파일 제외. 다음 작업: 실제 TMDB 재수집/coverage 점검 후 공식 공개 증거로 게시 판단.
 
+## DATA-58 인계 (2026-11-16)
+
+- 원본 backend `docs/tasks/DATA-58-tmdb-sharded-independent-discovery.md`. 요구: OTT 신작/시즌 자동 발견→한국 공식 최초 공개 근거→검토 후 게시. StreamPick 참조 52행은 사후 평가 전용.
+- 이전 실 TMDB 독립 월별 821작품 후보/월별 페이지 잘림 2구간. 글로벌 조회를 날짜 분할하고 상한 100페이지로 실측한 결과 3,303작품, 잘림0, API오류0. Coupang 영화 provider 미등재로 전체 완전성은 미확보. 과거 후보ID 49행은 다시 발견했지만 시즌/OTT 날짜 검증은 별도다.
+- backend Node24 관련32/32, mjs 전체157/157 자체 통과. 새 실제 분할 수집의 결과는 backend 작업 카드에 갱신. 제품 DB 게시/독립 runner/클라우드 미실행. API 계약·migration·verifier 기준 불변, 기존 app signing 및 backend 개인 dirty 제외. 다음은 분할 결과의 시즌 후보화와 공식 KR 최초 공개일 교차검증.
+

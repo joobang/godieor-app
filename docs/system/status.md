@@ -430,3 +430,9 @@ backend `b637ecb`: 한국 공식 OTT 목록을 시작점으로 플랫폼/날짜/
 - backend에 KR 제공처 없는 글로벌 TV 방영일 발견 경로 및 coverage 진단, 참조행을 후보 seed로 사용하지 않는 역감사 CLI를 추가. Node24 관련30/30·`.test.mjs` 전체154/154 통과; CJS 포함 220개 중 219통과·HTTP listen EPERM 1, `npm test` 빌드 삭제 EPERM. 읽기 전용 52행 분석 성공. 실네트워크 재수집/DB 게시/독립 검증은 이번 작업 미실행, 실제 누락 수량 감소는 미측정.
 - 제품/계약/migration/앱 화면/검증 기준 변경 없음. 기존 개인 dirty 보존. 다음은 새 수집 경로 실측 → 공식 KR OTT 최초일 증거 연결 → review/publish → DB/API/참조 재집계.
 
+## DATA-58 · TMDB 글로벌 방영일 분할 검색 (2026-11-16)
+
+- backend 원본 `docs/tasks/DATA-58-tmdb-sharded-independent-discovery.md`. 월별 글로벌 방영일 검색 155/55페이지가 최대20페이지에서 잘리던 문제를 날짜 구간 자동 분할로 개선. 독립 검색 평가 코드와 분할 실패·중복 반례를 추가했다.
+- 기준 52개 한국 OTT 참조 행 중 기존 게시 정확26, 시즌 미발견2 유지. 실 TMDB 상세에서 스폰지밥 시즌20과 몰몬교 주부들 시즌6은 시즌 배열에 없음. TMDB 시리즈 ID 확인을 해당 시즌 검증으로 간주하지 않는다.
+- backend 자체 Node24 관련32/32·mjs 전체157/157 통과(이후 감사 도구 수정 재검사 별도). TMDB 실 재수집 결과 20페이지 상한 2,825작품/잘림12, 100페이지 상한 3,303작품/잘림0/API오류0. Coupang 영화 제공처 목록 미등재로 complete=false. 과거 참조 후보 ID 49행 작품 재발견은 첫 공개 검증이 아니며 게시 정확26/52 유지. DB/API 게시·독립 verifier·실기기·클라우드 미실행, 계약·migration·승인 상태 불변. app 개인 iOS signing dirty 보존.
+
