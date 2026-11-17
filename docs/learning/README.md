@@ -1,5 +1,5 @@
-# 학습 기록 위치 변경
+# GODIEOR 기술 선택·문제 해결 해설
 
-통합 카탈로그 원본을 `godieor-verifier/docs/learning/`으로 옮겼다.
-[이 기록의 새 위치](https://github.com/joobang/godieor-verifier/blob/dev/docs/learning/README.md)를 참조한다.
-로컬에서는 형제 저장소의 같은 경로를 읽는다. 원격 링크는 문서 변경을 푸시한 뒤 반영된다.
+통합 학습 카탈로그 원본은 [verifier의 학습 글 목록](../../../godieor-verifier/docs/learning/README.md)이다. 문제·원리·예제·대안·선택 이유를 읽는 곳이다. 2026-11-17 5편을 재작성했고 나머지 16편은 보완점을 표시했다.
+
+작업을 남길 때 [공통 작성 기준](../system/learning-policy.md)을 따른다. 실행 결과 요약을 덧붙인 것만으로 학습 해설을 작성했다고 처리하지 않는다. 앱의 기술 결정·실제 명령 원본은 이 저장소 ADR·작업 카드에 남긴다.

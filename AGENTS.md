@@ -35,3 +35,5 @@
 - 2026-11-09 사용자 보완: 커밋은 영문 타입 + 한글 설명으로 작성한다. 예: `feat: 월간 달력 추가`, `chore: 개발 환경 정리`, `test: 날짜 경계 검사 추가`. 세부 형식은 `docs/system/handoff.md`를 따른다.
 
 - 2026-11-10 사용자 확정: 전용 macOS 계정 검증방식 폐기. 기존계정의 검토한고정source에서 로컬검사·unsigned iOS빌드 진행, 전용계정로그인/암호를 요구하지 않는다. 현재 실행정책은 verifier/docs/local-verification.md이며 로컬검사와 OS격리/전체제품PASS를 구분한다.
+
+- 2026-11-17 학습 기록 시정: `docs/system/learning-policy.md`를 따른다. 작업·검증 요약 append를 해설로 대체하지 말고, 독자가 문제·원리·예제·대안·선택 이유·비용을 본문에서 이해할 수 있게 쓴다.
