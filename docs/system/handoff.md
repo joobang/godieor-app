@@ -1,3 +1,9 @@
+## DATA-84 · StreamPick/TMDB fallback 22건 로컬 DB 적재 (2026-11-17)
+
+- 원본 backend `docs/tasks/DATA-84-streampick-tmdb-provisional-fallback.md`, 커밋 `30e34a6`. 사용자 요청에 따라 시즌 KR 제공처 근거 7건 + 시리즈 KR 제공처 근거 14건 + 한국 제공처 미확인 나인투식스 1건을 `ott_fallback`으로 적재. 스폰지밥 S20·몰몬교 주부들 S6은 TMDB 시즌 부재로 제외.
+- 로컬 DB 이벤트 32695→32717(+22), 날짜·시즌·플랫폼 22/22, 반복 적재 신규0. 공식 한국 최초 공개 검증은 0/22이며 UI 임시 표기·정식 승인/ID 승격, Supabase 배포 미완료.
+- 전체 테스트 342/343; TMDB 10~12월 최신 스냅샷과 기존 기간 가정 테스트 1건 불일치. 앱 코드·API 계약·verifier verdict 변경 없음. 데이터 100% 완료 미달. backend만 커밋했으며 push는 하지 않음.
+
 ## LEARN-REPAIR-01 · 학습 해설 품질 시정 (2026-11-17)
 
 - 사용자 지적: 작업·검증 요약 누적으로 기술 선택과 해결 원리를 읽기 어려움. 원본 app `docs/ai/tasks/LEARN-REPAIR-01.md`.
