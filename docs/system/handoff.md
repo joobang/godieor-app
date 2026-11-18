@@ -1,3 +1,10 @@
+## CI-04 · backend dev 브랜치 동기화와 필수 PR 검사 (2026-11-18)
+
+- GitHub backend `main`과 기본 브랜치 `dev`를 `d0d3648`로 동기화했다. PR #2 검사 44246996316, 동기화 뒤 main 44247177428 및 dev 44247209137의 Backend CI가 통과했다.
+- 새 변경은 최신 `dev`에서 `codex/` 작업 브랜치로 분기하고 `dev`로 PR을 연다. 양쪽 대상 브랜치 모두 PR·GitHub Actions `test`·최신 base 필수 및 관리자 우회 금지. `dev` 규칙 86509995, `main` 규칙 86508537. 릴리스는 별도 `dev → main` PR로 진행한다.
+- dev 대상 문서 PR #3 head `42276fc`에서 검사 44247574020이 필수로 표시되고, 실행 중 병합 비활성, 성공 후 병합 활성 상태를 확인했다. 브랜치 동기화 상태를 유지하도록 이 문서 PR은 열어 두었다.
+- 예약 수집은 `COLLECTION_SCHEDULE_ACTIVE=true`일 때 활성화된다. 운영 백필과 독립 검증 재실행·승인은 이번 작업에서 수행하지 않았다. backend `docs/tasks/CI-04-dev-sync.md`, LEARN-0015, 담당 해제. revision SYNC-2026-11-18-CI-04.
+
 ## CI-03 · B안 backend main 적용 확인 (2026-11-18)
 
 - PR #1의 고정 head 06464d1을 merge commit 9f218b9로 병합. backend main의 PR 필수 GitHub Actions test 규칙 유지. 병합 SHA Backend CI 44245768636에서 build/test·일회용 PostgreSQL migration/HTTP API·Job summary 성공 확인.
