@@ -1,3 +1,9 @@
+## APP-UI-01 · 월간 달력 가독성·상단 공간 개선 (2026-11-18)
+
+- `dev` 기반 `codex/calendar-readability-20261118`에서 계정·동기화 컨트롤을 우상단 버튼의 시트로 옮겨 달력 화면 공간을 확보했다. 월 이동, 카테고리, 필터, 날짜별 조회는 유지했다. 날짜 셀의 숫자·대표 일정 제목과 전체 건수를 명확히 표시한다.
+- 실행 `git diff --check` 통과, `xcodebuild ... -sdk iphonesimulator ... CODE_SIGNING_ALLOWED=NO build` 성공. 실제 iPhone 가독성과 계정 시트 동작, 독립 검증은 미확인.
+- 원본 `docs/ai/tasks/APP-UI-01.md`. `PublicAPI.options`의 계약 검사를 현재 앱 참조 `0.1.0-draft.5`로 수정했다. 계약 원본·migration·verifier 기준·판정은 변경하지 않았다. 다음 작업은 포스터 API 데이터 존재 여부 확인 후 상세 이미지 표시와 실제 기기 UI 확인. 담당 해제.
+
 ## APP-DEPLOY-01 · Render 운영 API iOS 연결 (2026-11-18)
 
 - 앱 `dev` 기반 `codex/ios-render-api-20261118`에서 Debug/Release API 주소를 `https://godieor-backend.onrender.com/v1`로 교체. 실제 Render health(DB 연결)/options/calendar/events HTTP 200, 11월 일정 첫 페이지100개·후속 커서 확인. iOS Debug/Release unsigned 빌드 성공 및 생성 plist 주소 확인.
