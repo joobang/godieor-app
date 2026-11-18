@@ -1,3 +1,8 @@
+## CI-03 · PR DB·API 및 독립 증거 연결 (2026-11-18)
+
+- backend PR #1 head 06464d1, 원격 Backend CI 44244618154에서 360/360, 일회용 PostgreSQL migration·데이터·HTTP API와 Job summary 성공. 양식과 검사 변경은 PR에 있으며 main 병합 대기.
+- 앱 계약 지문 원본과 동기화 후 PR head의 독립 verifier를 실행하고 요약을 PR에 첨부. iOS 빌드·이벤트 ID 성공, 시간 API HTTP400·비밀 검사 실패, 4개 기준 SKIPPED, 최종 ERROR. 원본 backend `docs/tasks/CI-03-pr-evidence.md`, LEARN-0015. 정책 승인 및 운영 적재 없음. revision SYNC-2026-11-18-CI-03, 담당 해제.
+
 ## CI-02 · backend main PR 필수 검사 적용 (2026-11-18)
 
 - 원본 backend `docs/tasks/CI-02-backend-pr-gate.md`. 기존 Actions run44239623270 성공과 Checks API의 `test` / GitHub Actions(15368) 확인. main 범위 PR 필수·최신 base·별도 승인 0·관리자 우회 금지 규칙을 GitHub에 적용하고 저장된 설정을 읽어 확인했다.
