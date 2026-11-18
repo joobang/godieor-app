@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var catalogOptions: CatalogOptions?
     @State private var optionsError: String?
     @State private var showingFilters = false
+    @State private var showingAccount = false
     @State private var calendar: ReleaseCalendar?
     @State private var lastCalendars: [String: ReleaseCalendar] = [:]
     @State private var showingCachedCalendar = false
@@ -57,14 +58,13 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("곧이어, 만날 즐거움").font(.title2.bold())
-                    accountPanel
+                VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Button { moveMonth(-1) } label: { Image(systemName: "chevron.left") }
                             .accessibilityLabel("이전 달")
                         Spacer()
-                        Text(monthKey.replacingOccurrences(of: "-", with: "년 ") + "월").font(.headline)
+                        Text(monthKey.replacingOccurrences(of: "-", with: "년 ") + "월")
+                            .font(.title3.bold())
                         Spacer()
                         Button { moveMonth(1) } label: { Image(systemName: "chevron.right") }
                             .accessibilityLabel("다음 달")
@@ -90,16 +90,35 @@ struct ContentView: View {
                         Spacer()
                         Button("필터") { showingFilters = true }.disabled(catalogOptions == nil)
                     }
-                    Text(account.user == nil ? "필터 설정은 이 기기에 임시 저장돼요." : "기기 설정을 계정에 저장하거나 계정 설정을 다시 불러올 수 있어요.")
-                        .font(.caption).foregroundStyle(.secondary)
                     calendarContent
-                }.padding(16)
+                }.padding(.horizontal, 12).padding(.vertical, 8)
             }
             .navigationTitle("GODIEOR")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingAccount = true } label: {
+                        Image(systemName: account.user == nil ? "person.crop.circle" : "person.crop.circle.fill")
+                    }
+                    .accessibilityLabel("계정 및 동기화 설정")
+                }
+            }
             .sheet(item: $selectedEvent) { event in
                 if let filters { NavigationStack { EventDetailView(event: event, filters: filters, api: api) } }
             }
             .sheet(isPresented: $showingFilters) { filterSheet }
+            .sheet(isPresented: $showingAccount) {
+                NavigationStack {
+                    ScrollView { accountPanel.padding() }
+                        .navigationTitle("계정 및 동기화")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("완료") { showingAccount = false }
+                            }
+                        }
+                }
+            }
             .onChange(of: account.settings?.version) { _, _ in applyAccountSettings() }
             .onChange(of: account.user?.id) { previous, current in
                 // Account settings must not remain in shared device preferences after logout.
@@ -313,16 +332,16 @@ struct ContentView: View {
     private var monthGrid: some View {
         let offset = CalendarDay.iso.component(.weekday, from: month) - 1
         let count = CalendarDay.iso.range(of: .day, in: .month, for: month)!.count
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 3), count: 7)
         return VStack(spacing: 8) {
             HStack {
                 ForEach(["일", "월", "화", "수", "목", "금", "토"], id: \.self) { label in
                     Text(label).font(.caption.bold()).frame(maxWidth: .infinity)
                 }
             }
-            LazyVGrid(columns: columns, spacing: 5) {
+            LazyVGrid(columns: columns, spacing: 4) {
                 ForEach(0..<(offset + count), id: \.self) { index in
-                    if index < offset { Color.clear.frame(height: 76) }
+                    if index < offset { Color.clear.frame(height: 82) }
                     else {
                         let number = index - offset + 1
                         let date = String(format: "%@-%02d", monthKey, number)
@@ -330,26 +349,26 @@ struct ContentView: View {
                         Button {
                             selectedDate = date
                         } label: {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("\(number)").font(.caption.bold())
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 1) {
+                                    Text("\(number)").font(.system(size: 13, weight: .bold))
+                                    Spacer(minLength: 0)
+                                    if let day, day.total > 0 {
+                                        Text("\(day.total)")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(.tint)
+                                    }
+                                }
                                 if let day, day.total > 0 {
-                                    ForEach(day.previews.prefix(2)) { item in
-                                        HStack(spacing: 2) {
-                                            if item.kind == "ott_season_premiere" {
-                                                Text(item.services.map(ottMark).joined(separator: "/"))
-                                                    .font(.system(size: 8, weight: .heavy))
-                                            }
-                                            Text(item.title).font(.system(size: 9)).lineLimit(1)
-                                        }
-                                    }
-                                    if day.total > day.previews.count {
-                                        Text("+\(day.total - day.previews.count)").font(.caption2.bold())
-                                    }
+                                    Text(day.previews.first?.title ?? "일정")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.leading)
                                 }
                                 Spacer(minLength: 0)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .frame(height: 70, alignment: .top)
+                            .frame(height: 76, alignment: .top)
                             .padding(3)
                             .background(selectedDate == date ? Color.accentColor.opacity(0.2) : Color.gray.opacity(0.08), in: RoundedRectangle(cornerRadius: 7))
                         }
@@ -518,6 +537,7 @@ private struct EventDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var detail: ReleaseDetail?
     @State private var error: String?
+    @State private var content: CatalogContent?
 
     private var displayedEvent: ReleaseEvent { detail?.event ?? event }
 
@@ -525,6 +545,30 @@ private struct EventDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text(displayedEvent.title).font(.title2.bold())
+                if let poster = content?.posterUrl,
+                   let url = URL(string: poster), url.scheme?.lowercased() == "https",
+                   url.host != nil {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFit()
+                        case .empty:
+                            ProgressView().frame(maxWidth: .infinity, minHeight: 180)
+                        case .failure:
+                            posterPlaceholder
+                        @unknown default:
+                            posterPlaceholder
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(maxHeight: 300)
+                    .accessibilityLabel("\(displayedEvent.title) 포스터")
+                } else {
+                    posterPlaceholder
+                }
+                if let synopsis = content?.synopsis, !synopsis.isEmpty {
+                    Text(synopsis).font(.subheadline).foregroundStyle(.secondary)
+                }
                 LabeledContent("분야", value: displayedEvent.categoryTitle)
                 LabeledContent("일정", value: displayedEvent.time.description)
                 LabeledContent("상태", value: displayedEvent.statusTitle)
@@ -564,5 +608,23 @@ private struct EventDetailView: View {
             catch is CancellationError { return }
             catch { if !Task.isCancelled { self.error = "상세 조회 실패: \(error.localizedDescription)" } }
         }
+        .task(id: displayedEvent.contentId) {
+            content = nil
+            guard let id = displayedEvent.contentId else { return }
+            do { content = try await api.content(id: id) }
+            catch { /* 포스터 조회 실패 시 일정 상세는 그대로 표시한다. */ }
+        }
+    }
+
+    private var posterPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 14)
+            .fill(.quaternary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 130)
+            .overlay {
+                Label("포스터 준비 중", systemImage: "photo")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
     }
 }

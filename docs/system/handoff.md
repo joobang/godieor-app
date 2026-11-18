@@ -1,3 +1,9 @@
+## APP-UI-01 · 월간 달력 가독성·상단 공간 개선 (2026-11-18)
+
+- `dev` 기반 `codex/calendar-readability-20261118`에서 계정·동기화 컨트롤을 우상단 버튼의 시트로 옮겨 달력 화면 공간을 확보했다. 월 이동, 카테고리, 필터, 날짜별 조회는 유지했다. 날짜 셀의 숫자·대표 일정 제목과 전체 건수를 명확히 표시한다.
+- 실행 `git diff --check` 통과, `xcodebuild ... -sdk iphonesimulator ... CODE_SIGNING_ALLOWED=NO build` 성공. 실제 iPhone 가독성과 계정 시트 동작, 독립 검증은 미확인.
+- 원본 `docs/ai/tasks/APP-UI-01.md`. `PublicAPI.options`의 계약 검사를 현재 앱 참조 `0.1.0-draft.5`로 수정했다. 계약 원본·migration·verifier 기준·판정은 변경하지 않았다. 다음 작업은 포스터 API 데이터 존재 여부 확인 후 상세 이미지 표시와 실제 기기 UI 확인. 담당 해제.
+
 ## APP-DEPLOY-01 · Render 운영 API iOS 연결 (2026-11-18)
 
 - 앱 `dev` 기반 `codex/ios-render-api-20261118`에서 Debug/Release API 주소를 `https://godieor-backend.onrender.com/v1`로 교체. 실제 Render health(DB 연결)/options/calendar/events HTTP 200, 11월 일정 첫 페이지100개·후속 커서 확인. iOS Debug/Release unsigned 빌드 성공 및 생성 plist 주소 확인.
@@ -624,3 +630,8 @@ backend `b637ecb`: 한국 공식 OTT 목록을 시작점으로 플랫폼/날짜/
 
 - Node.js 24.22.3(앱 실행 환경용 Node; NestJS 프레임워크는 12.4.0)로 엔진·Render·CI 정렬. NestJS 제공처 08:30 KST/영속 OTT 상태 충족 시 09:00 KST, Actions 정시 트리거 제거.
 - Render Free 유휴 슬립과 임시 디스크 때문에 정시 실행 및 OTT 검토 상태 연속성은 보장하지 않는다. OTT opt-in 기본값 false. 서버 배포·환경변수 설정·실제 DB 검증 이후 운영 전환 필요. 원본 카드 `docs/tasks/DEPLOY-02-render-internal-daily.md`.
+## APP-UI-02 · 일정 상세 포스터 연결 (2026-11-18)
+
+- `origin/dev` 1eda7bf에서 `codex/poster-detail-20261118` 별도 작업 트리로 진행. GET `/contents/{contentId}`에 있는 포스터 URL과 작품 설명을 상세 화면에서 비동기 조회한다.
+- HTTP/없는 포스터·콘텐츠 조회 실패는 안전한 자리표시자로 대체하고 날짜·상태·출처는 유지한다. 작업 카드 `docs/ai/tasks/APP-UI-02.md`.
+- 자체 빌드·git 검사는 작업 카드와 실제 로그 기준으로 기록. 기기 UI/독립 verifier는 미실행. 계약·migration·승인상태 변경 없음. 담당 해제.
