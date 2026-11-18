@@ -1,3 +1,8 @@
+## APP-DEPLOY-01 · Render 운영 API iOS 연결 (2026-11-18)
+
+- 앱 `dev` 기반 `codex/ios-render-api-20261118`에서 Debug/Release API 주소를 `https://godieor-backend.onrender.com/v1`로 교체. 실제 Render health(DB 연결)/options/calendar/events HTTP 200, 11월 일정 첫 페이지100개·후속 커서 확인. iOS Debug/Release unsigned 빌드 성공 및 생성 plist 주소 확인.
+- 원본 `docs/ai/tasks/APP-DEPLOY-01.md`. API 계약·migration·verifier acceptance/verdict 변경 없음. 앱 재설치와 실제 iPhone·Google 로그인 확인, GitHub Actions 자연 예약 실행 확인은 후속. 원격 배포 SHA 미검증. 담당 해제.
+
 ## DATA-86 · 초기등록·수집기록 트랜잭션 보완 (2026-11-18)
 
 - 원본 backend `docs/tasks/DATA-86-control-transactions.md`. DATA85의 게시한도 변경에서 빠진 register/beginRun/failRun을 명시적 제어작업60초(설정10초~5분)·연결획득10초로 보완. 게시한도·원자적scope/ID/이력·계약/migration 불변.
