@@ -3,6 +3,21 @@
 - 앱 `dev` 기반 `codex/ios-render-api-20261118`에서 Debug/Release API 주소를 `https://godieor-backend.onrender.com/v1`로 교체. 실제 Render health(DB 연결)/options/calendar/events HTTP 200, 11월 일정 첫 페이지100개·후속 커서 확인. iOS Debug/Release unsigned 빌드 성공 및 생성 plist 주소 확인.
 - 원본 `docs/ai/tasks/APP-DEPLOY-01.md`. API 계약·migration·verifier acceptance/verdict 변경 없음. 앱 재설치와 실제 iPhone·Google 로그인 확인, GitHub Actions 자연 예약 실행 확인은 후속. 원격 배포 SHA 미검증. 담당 해제.
 
+## DATA-86 · 초기등록·수집기록 트랜잭션 보완 (2026-11-18)
+
+- 원본 backend `docs/tasks/DATA-86-control-transactions.md`. DATA85의 게시한도 변경에서 빠진 register/beginRun/failRun을 명시적 제어작업60초(설정10초~5분)·연결획득10초로 보완. 게시한도·원자적scope/ID/이력·계약/migration 불변.
+- 실패 phase(register/begin_run/publish/fail_run)를 CLI·OTT자식·일일runner에 안전하게 보존. 원문SQL/URL/드라이버예외를 출력하지 않음. 실제run44216042056의 P2028 정확한발생지점은 과거로그만으로 확정하지 않음.
+- 공식Node24.22.3 전체357/357, 별도컨텍스트리뷰 관련27/27·추가지적없음. 고정digest 일회용PostgreSQL에서 기존5초실패·수정네경로5.3초초과실행성공·10초제한초과의provider/scope/revision원자rollback확인. 합성지연재현이며 실제Supabase/원격Actions성공·독립제품PASS가 아님.
+- 사용자 수정·push명시요청. 새main커밋에서 Run workflow→main→backfill로 시작해야 함(기존Re-run jobs는옛SHA사용). Secret추가불필요. 최종커밋·원격SHA는Git이력확인. 학습LEARN0022 본문보완, revision `SYNC-2026-11-18-DATA-86`, 담당해제.
+
+## DATA-85 · Actions 수집 실패 진단·설정·원격 적재 한도 수정 (2026-11-18)
+
+- 원본 backend `docs/tasks/DATA-85-collection-workflow-repair.md`. 실제 실패 run44056014741/job133945486454의 TMDB 토큰 공백·제공처 일부 실패·OTT 자식 exit1 확인. 당시 상세 예외는 유실돼 timeout이 실제 원인이라고 확정하지 않는다.
+- 공통 DB 설정과 제공처 키 검사를 분리해 키 누락은 해당 제공처에서 처리하며 TMDB 누락도 나머지 OTT 원천·기검토 게시를 중단하지 않음. HTTP상태/Prisma·네트워크 코드와 시장·단계를 허용 목록으로 남기고 예외 원문·쿼리·접속 문자열은 출력하지 않는다. 새 오류 코드를 일일 runner에서도 보존. OTT 필수단계 실패도 JSON 보고서 보존, 실제 게시 실패exit1/부분발견exit2 구분 유지.
+- CI 원격 DB 게시 한도15분(설정 범위30초~30분), 로컬 기존30초/IGDB180초 유지. 범위 원자적 commit/rollback·기존ID/이력·계약/migration 불변. 긴 트랜잭션 비용은 남으며 실환경 소요시간 재확인 필요.
+- 공식 Node24.22.3 빌드·최종 전체353/353, YAML+9개 run스크립트 bash문법 통과. 최초 sandbox검사343/344는 localhost EPERM, 허용 재실행350/350 뒤 리뷰보완 최종353/353. 합성/로컬 회귀이며 실DB/원천 재수집·원격Actions·독립 통합runner/제품PASS 미실행.
+- 별도 컨텍스트 코드 리뷰의 실패격리·일일runner 호환성 지적3건 수정. 운영 복구 완료와 구분. GitHub Secret 등록/push/원격 재실행은 남음. 학습 LEARN-0022, revision `SYNC-2026-11-18-DATA-85`. 담당 해제.
+
 ## DATA-84 · StreamPick/TMDB fallback 22건 로컬 DB 적재 (2026-11-17)
 
 - 원본 backend `docs/tasks/DATA-84-streampick-tmdb-provisional-fallback.md`, 커밋 `30e34a6`. 사용자 요청에 따라 시즌 KR 제공처 근거 7건 + 시리즈 KR 제공처 근거 14건 + 한국 제공처 미확인 나인투식스 1건을 `ott_fallback`으로 적재. 스폰지밥 S20·몰몬교 주부들 S6은 TMDB 시즌 부재로 제외.
@@ -602,3 +617,10 @@ backend `b637ecb`: 한국 공식 OTT 목록을 시작점으로 플랫폼/날짜/
 
 - 원본 제품 정책: app `docs/product.md`; 구현: backend `docs/tasks/DATA-81-october-game-cutoff.md`. backend 테스트340/340, DB 조작·독립 승인·push 없음. 원본 ID/찜/기존 역사적 리뷰 보존. 다음: 전 카테고리 10월 이후 실 DB 신규 수집·API 확인, 이전 데이터 참조 감사 후 용량 정리. revision `SYNC-2026-11-17-DATA-81`.
 
+
+## 과거 배포 제안 기록 (현재 실행 정책은 DATA-85 및 backend 운영 문서 우선)
+
+## DEPLOY-02 · Render 내부 일간 배치 준비 인계 (2026-11-17)
+
+- Node.js 24.22.3(앱 실행 환경용 Node; NestJS 프레임워크는 12.4.0)로 엔진·Render·CI 정렬. NestJS 제공처 08:30 KST/영속 OTT 상태 충족 시 09:00 KST, Actions 정시 트리거 제거.
+- Render Free 유휴 슬립과 임시 디스크 때문에 정시 실행 및 OTT 검토 상태 연속성은 보장하지 않는다. OTT opt-in 기본값 false. 서버 배포·환경변수 설정·실제 DB 검증 이후 운영 전환 필요. 원본 카드 `docs/tasks/DEPLOY-02-render-internal-daily.md`.
