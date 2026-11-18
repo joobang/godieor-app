@@ -135,6 +135,12 @@ struct ReleaseDetail: Decodable {
     let previousTime: ReleaseTime?
 }
 
+struct CatalogContent: Decodable {
+    let id: String
+    let posterUrl: String?
+    let synopsis: String?
+}
+
 enum PublicAPIError: LocalizedError {
     case invalidURL
     case unsupportedContract(String)
@@ -253,6 +259,10 @@ struct PublicAPI {
         try await get("events/\(id)", query: [
             .init(name: "timeZone", value: filters.timeZone)
         ])
+    }
+
+    func content(id: String) async throws -> CatalogContent {
+        try await get("contents/\(id)")
     }
 }
 

@@ -639,3 +639,7 @@ backend `b637ecb`: 한국 공식 OTT 목록을 시작점으로 플랫폼/날짜/
 
 - Node.js 24.22.3 엔진·CI·Render 고정, npm lockfile 갱신. NestJS 12.4.0의 `@nestjs/schedule`로 제공처 배치 08:30 KST, 영속 검토 상태가 준비된 경우에만 OTT 09:00 KST opt-in. GitHub Actions 정시 트리거 제거(수동 실행 유지).
 - Render Free가 유휴시 슬립하므로 정시 실행을 보장할 수 없으며 OTT 검토 상태는 영속 저장소가 마련되기 전까지 비활성. 클라우드 실제 배포·일간 실행 검증 및 독립 검증은 미실시. 상세 `docs/tasks/DEPLOY-02-render-internal-daily.md`.
+## APP-UI-02 · 상세 포스터 표시 (2026-11-18)
+
+- `dev` 기반 별도 브랜치에서 기존 콘텐츠 상세 API의 `posterUrl`/`synopsis`를 SwiftUI 일정 상세와 연결했다. HTTPS 이미지는 비동기 표시하고 없는 포스터·조회 실패는 자리표시자로 처리한다.
+- 이벤트 상세/출처는 기존대로 표시하며 backend 계약·DB·verifier acceptance/verdict는 변경하지 않았다. 작업 원본 `docs/ai/tasks/APP-UI-02.md`. 실제 iPhone·독립 검증은 후속.

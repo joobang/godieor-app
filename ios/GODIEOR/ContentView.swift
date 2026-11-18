@@ -537,6 +537,7 @@ private struct EventDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var detail: ReleaseDetail?
     @State private var error: String?
+    @State private var content: CatalogContent?
 
     private var displayedEvent: ReleaseEvent { detail?.event ?? event }
 
@@ -544,6 +545,30 @@ private struct EventDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text(displayedEvent.title).font(.title2.bold())
+                if let poster = content?.posterUrl,
+                   let url = URL(string: poster), url.scheme?.lowercased() == "https",
+                   url.host != nil {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFit()
+                        case .empty:
+                            ProgressView().frame(maxWidth: .infinity, minHeight: 180)
+                        case .failure:
+                            posterPlaceholder
+                        @unknown default:
+                            posterPlaceholder
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(maxHeight: 300)
+                    .accessibilityLabel("\(displayedEvent.title) 포스터")
+                } else {
+                    posterPlaceholder
+                }
+                if let synopsis = content?.synopsis, !synopsis.isEmpty {
+                    Text(synopsis).font(.subheadline).foregroundStyle(.secondary)
+                }
                 LabeledContent("분야", value: displayedEvent.categoryTitle)
                 LabeledContent("일정", value: displayedEvent.time.description)
                 LabeledContent("상태", value: displayedEvent.statusTitle)
@@ -583,5 +608,23 @@ private struct EventDetailView: View {
             catch is CancellationError { return }
             catch { if !Task.isCancelled { self.error = "상세 조회 실패: \(error.localizedDescription)" } }
         }
+        .task(id: displayedEvent.contentId) {
+            content = nil
+            guard let id = displayedEvent.contentId else { return }
+            do { content = try await api.content(id: id) }
+            catch { /* 포스터 조회 실패 시 일정 상세는 그대로 표시한다. */ }
+        }
+    }
+
+    private var posterPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 14)
+            .fill(.quaternary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 130)
+            .overlay {
+                Label("포스터 준비 중", systemImage: "photo")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
     }
 }
