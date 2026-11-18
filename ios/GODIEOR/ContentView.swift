@@ -393,31 +393,40 @@ struct ContentView: View {
             }
             ForEach(events) { item in
                 HStack(spacing: 8) {
-                Button { selectedEvent = item } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(item.categoryTitle).font(.caption.bold())
-                            if item.dataOrigin == "fixture" { Text("가상").font(.caption).foregroundStyle(.orange) }
-                            if item.status != "scheduled" { Text(item.statusTitle).font(.caption).foregroundStyle(.red) }
-                        }
-                        Text(item.title).font(.body.bold())
-                        if item.kind == "ott_season_premiere" {
-                            HStack(spacing: 5) {
-                                ForEach(item.services, id: \.self) { service in
-                                    Text(ottMark(service))
-                                        .font(.caption2.bold())
-                                        .padding(.horizontal, 7).padding(.vertical, 3)
-                                        .background(Color.accentColor.opacity(0.14), in: Capsule())
-                                        .accessibilityLabel(ottName(service))
+                    Button { selectedEvent = item } label: {
+                        HStack(alignment: .top, spacing: 12) {
+                            EventPosterThumbnail(contentId: item.contentId, api: api)
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(item.categoryTitle).font(.caption.bold())
+                                    if item.dataOrigin == "fixture" {
+                                        Text("가상").font(.caption).foregroundStyle(.orange)
+                                    }
+                                    if item.status != "scheduled" {
+                                        Text(item.statusTitle).font(.caption).foregroundStyle(.red)
+                                    }
                                 }
+                                Text(item.title).font(.body.bold())
+                                if item.kind == "ott_season_premiere" {
+                                    HStack(spacing: 5) {
+                                        ForEach(item.services, id: \.self) { service in
+                                            Text(ottMark(service))
+                                                .font(.caption2.bold())
+                                                .padding(.horizontal, 7).padding(.vertical, 3)
+                                                .background(Color.accentColor.opacity(0.14), in: Capsule())
+                                                .accessibilityLabel(ottName(service))
+                                        }
+                                    }
+                                }
+                                Text(item.time.description).font(.caption).foregroundStyle(.secondary)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        Text(item.time.description).font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
-                }.buttonStyle(.plain)
+                    .buttonStyle(.plain)
                 if account.user != nil {
                     let saved = item.contentId.map { account.favoriteContentIDs.contains($0) } ?? account.favoriteEventIDs.contains(item.id)
                     Button {
@@ -538,6 +547,7 @@ private struct EventDetailView: View {
     @State private var detail: ReleaseDetail?
     @State private var error: String?
     @State private var content: CatalogContent?
+    @State private var isContentLoading = false
 
     private var displayedEvent: ReleaseEvent { detail?.event ?? event }
 
@@ -545,27 +555,10 @@ private struct EventDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text(displayedEvent.title).font(.title2.bold())
-                if let poster = content?.posterUrl,
-                   let url = URL(string: poster), url.scheme?.lowercased() == "https",
-                   url.host != nil {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFit()
-                        case .empty:
-                            ProgressView().frame(maxWidth: .infinity, minHeight: 180)
-                        case .failure:
-                            posterPlaceholder
-                        @unknown default:
-                            posterPlaceholder
-                        }
-                    }
+                PosterArtwork(urlString: content?.posterUrl, isLoading: isContentLoading)
                     .frame(maxWidth: .infinity)
-                    .frame(maxHeight: 300)
+                    .frame(height: 290)
                     .accessibilityLabel("\(displayedEvent.title) 포스터")
-                } else {
-                    posterPlaceholder
-                }
                 if let synopsis = content?.synopsis, !synopsis.isEmpty {
                     Text(synopsis).font(.subheadline).foregroundStyle(.secondary)
                 }
@@ -610,21 +603,82 @@ private struct EventDetailView: View {
         }
         .task(id: displayedEvent.contentId) {
             content = nil
-            guard let id = displayedEvent.contentId else { return }
+            guard let id = displayedEvent.contentId else { isContentLoading = false; return }
+            isContentLoading = true
+            defer { isContentLoading = false }
             do { content = try await api.content(id: id) }
+            catch is CancellationError { return }
             catch { /* 포스터 조회 실패 시 일정 상세는 그대로 표시한다. */ }
         }
     }
 
-    private var posterPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 14)
-            .fill(.quaternary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 130)
-            .overlay {
-                Label("포스터 준비 중", systemImage: "photo")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+}
+
+private struct EventPosterThumbnail: View {
+    let contentId: String?
+    let api: PublicAPI
+    @State private var posterURL: String?
+    @State private var isLoading = false
+
+    var body: some View {
+        PosterArtwork(urlString: posterURL, isLoading: isLoading, compact: true)
+            .frame(width: 70, height: 98)
+            .task(id: contentId) {
+                posterURL = nil
+                guard let contentId else { isLoading = false; return }
+                isLoading = true
+                defer { isLoading = false }
+                do { posterURL = try await api.content(id: contentId).posterUrl }
+                catch is CancellationError { return }
+                catch { /* 서버에 이미지가 없어도 일정 텍스트를 표시한다. */ }
             }
+    }
+}
+
+private struct PosterArtwork: View {
+    let urlString: String?
+    var isLoading = false
+    var compact = false
+
+    private var posterURL: URL? {
+        guard let urlString, let url = URL(string: urlString),
+              url.scheme?.lowercased() == "https", url.host != nil else { return nil }
+        return url
+    }
+
+    var body: some View {
+        Group {
+            if let posterURL {
+                AsyncImage(url: posterURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    case .empty:
+                        ProgressView()
+                    case .failure:
+                        placeholder
+                    @unknown default:
+                        placeholder
+                    }
+                }
+            } else if isLoading {
+                ProgressView()
+            } else {
+                placeholder
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.quaternary)
+        .clipShape(RoundedRectangle(cornerRadius: compact ? 8 : 14))
+        .accessibilityHidden(compact)
+    }
+
+    private var placeholder: some View {
+        VStack(spacing: 4) {
+            Image(systemName: "photo")
+                .font(compact ? .title3 : .title)
+            if !compact { Text("포스터 준비 중").font(.subheadline) }
+        }
+        .foregroundStyle(.secondary)
     }
 }
