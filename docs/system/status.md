@@ -1,3 +1,8 @@
+## APP-DEPLOY-01 · Render 운영 API iOS 연결 (2026-11-18)
+
+- 앱 `dev` 기반 `codex/ios-render-api-20261118`에서 Debug/Release API 주소를 `https://godieor-backend.onrender.com/v1`로 교체. 실제 Render health(DB 연결)/options/calendar/events HTTP 200, 11월 일정 첫 페이지100개·후속 커서 확인. iOS Debug/Release unsigned 빌드 성공 및 생성 plist 주소 확인.
+- 원본 `docs/ai/tasks/APP-DEPLOY-01.md`. API 계약·migration·verifier acceptance/verdict 변경 없음. 앱 재설치와 실제 iPhone·Google 로그인 확인, GitHub Actions 자연 예약 실행 확인은 후속. 원격 배포 SHA 미검증. 담당 해제.
+
 ## DATA-84 · StreamPick/TMDB fallback 22건 로컬 DB 적재 (2026-11-17)
 
 - 원본 backend `docs/tasks/DATA-84-streampick-tmdb-provisional-fallback.md`, 커밋 `30e34a6`. 사용자 요청에 따라 시즌 KR 제공처 근거 7건 + 시리즈 KR 제공처 근거 14건 + 한국 제공처 미확인 나인투식스 1건을 `ott_fallback`으로 적재. 스폰지밥 S20·몰몬교 주부들 S6은 TMDB 시즌 부재로 제외.
