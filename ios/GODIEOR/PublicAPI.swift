@@ -217,7 +217,7 @@ struct PublicAPI {
 
     func options() async throws -> CatalogOptions {
         let options: CatalogOptions = try await get("catalog/options")
-        guard options.contractVersion == "0.1.0-draft.2" else {
+        guard options.contractVersion == "0.1.0-draft.5" else {
             throw PublicAPIError.unsupportedContract(options.contractVersion)
         }
         return options
