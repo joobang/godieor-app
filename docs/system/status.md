@@ -1,3 +1,8 @@
+## UI-02 · A2 소셜 디스커버리 화면 (2026-11-19)
+
+- 사용자 선택 A2 디자인 적용. 검정·라임 테마, 원형 월간 달력, 분야 버튼, OTT/게임 제공처 도메인 아이콘, 이벤트 카드에 기존 포스터·찜·상태 유지. 원본 `docs/ai/tasks/UI-02-social-discovery.md`.
+- unsigned iOS Simulator 빌드 성공. CoreSimulatorService 연결 오류로 앱 화면의 시각 검증과 실기기 배포는 미관측. 기존 API/계정 및 독립 검증 기준은 유지.
+
 ## CI-04 · backend dev 브랜치 동기화와 필수 PR 검사 (2026-11-18)
 
 - GitHub backend `main`과 기본 브랜치 `dev`를 `d0d3648`로 동기화했다. PR #2 검사 44246996316, 동기화 뒤 main 44247177428 및 dev 44247209137의 Backend CI가 통과했다.
