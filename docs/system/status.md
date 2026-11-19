@@ -1,3 +1,13 @@
+## DATA-89 · 한국 극장 영화 포스터 보강 (2026-11-19)
+
+- KOBIS 영화 코드로 고정된 기존 작품을 TMDB 감독과 한국 극장 개봉일로 대조하고 빈 포스터만 보완한다. 원본 backend `docs/tasks/DATA-89-theatrical-posters.md`. 기존 이벤트·ID·찜 보존.
+- 자체 Node24 380/380 및 일회용 DB 잠금·멱등·상세 API 성공. iOS TMDB 로고·고지는 `docs/ai/tasks/APP-UI-03-tmdb-credits.md`. 운영 적용 결과는 백엔드 릴리스 및 포스터 전용 Actions에서 확인한다. revision SYNC-2026-11-19-DATA-89.
+
+## DATA-91 · 상업영화 정리 및 WORLD 게시 복구 (2026-11-19)
+
+- 원본 `docs/tasks/DATA-88-commercial-theatrical-world-batches.md`. 주요 배급사·장편 KOBIS 공식 상세 확인, 영화 달력 비노출 마이그레이션, 기존 IGDB WORLD 100건 배치 게시를 통합했다.
+- 구현 및 자체 검사 진행. 운영 DB 숨김 건수·원격 빌드·KOBIS/IGDB WORLD 실제 백필 성공은 아직 검증되지 않았다. 기존 이벤트/즐겨찾기/이력은 ID를 유지하도록 설계했다. LEARN-0022 연계.
+
 ## UI-06 · 홈과 일정 상세 리디자인 (2026-11-19)
 
 - 오늘 일정이 기본으로 보이는 달력, 분야 색상과 상단 필터, 포스터 중심 상세 및 출처 표시를 적용했다. 원본 app `docs/ai/tasks/UI-06-discovery-redesign.md`.

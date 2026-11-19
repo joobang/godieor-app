@@ -134,7 +134,14 @@ struct ContentView: View {
             .sheet(isPresented: $showingFilters) { filterSheet }
             .sheet(isPresented: $showingAccount) {
                 NavigationStack {
-                    ScrollView { accountPanel.padding() }
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 24) {
+                            accountPanel
+                            Divider()
+                            tmdbCredits
+                        }
+                        .padding()
+                    }
                         .navigationTitle("계정 및 동기화")
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
@@ -334,6 +341,27 @@ struct ContentView: View {
             if let error = account.errorText {
                 Text(error).font(.caption).foregroundStyle(.red)
             }
+        }
+    }
+
+    private var tmdbCredits: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("정보 및 출처")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            Link(destination: URL(string: "https://www.themoviedb.org")!) {
+                Image("TMDBLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 84)
+                    .frame(minHeight: 44, alignment: .leading)
+                    .accessibilityLabel("TMDB 공식 사이트")
+            }
+            Text("일부 작품 정보와 포스터는 TMDB에서 제공됩니다.")
+                .font(.subheadline)
+            Text(verbatim: "This product uses the TMDB API but is not endorsed or certified by TMDB.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 
