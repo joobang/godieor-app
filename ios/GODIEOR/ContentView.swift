@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var loadingDay = false
     @State private var dayRequestID = UUID()
     @State private var dayCache: [String: [ReleaseEvent]] = [:]
+    @State private var selectedDayHasPreview = false
     @State private var errorText: String?
     @State private var dayError: String?
     @State private var selectedEvent: ReleaseEvent?
@@ -93,6 +94,12 @@ struct ContentView: View {
                     }
                     categoryStories
                     serviceChips
+                    if !activeServices.isEmpty {
+                        Button("OTT 필터 초기화") { storedServices = "" }
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(lime)
+                            .accessibilityHint("선택한 OTT 제공처 필터를 모두 해제합니다")
+                    }
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(monthKey.replacingOccurrences(of: "-", with: "."))
@@ -197,6 +204,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(option.1) \(selected ? "선택됨" : "선택 안 됨")")
+                .accessibilityAddTraits(selected ? [.isSelected] : [])
             }
         }
     }
@@ -234,6 +242,7 @@ struct ContentView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(ottName(service)) \(active ? "필터 선택됨" : "필터 미선택")")
+                    .accessibilityAddTraits(active ? [.isSelected] : [])
                 }
             }
         }
@@ -334,7 +343,11 @@ struct ContentView: View {
                 Button("다시 시도") { Task { await loadOptions() } }
             }
             if categories.isEmpty { Text("선택한 분야가 없어요. 분야를 하나 이상 선택해 주세요.").font(.caption).foregroundStyle(.secondary) }
-            if loading { ProgressView("달력 불러오는 중") }
+            if loading && calendar == nil {
+                ProgressView("달력 불러오는 중")
+                    .frame(maxWidth: .infinity, minHeight: 170)
+                    .background(panel, in: RoundedRectangle(cornerRadius: 24))
+            }
             if let errorText {
                 ContentUnavailableView("연결 실패", systemImage: "wifi.exclamationmark", description: Text(errorText))
                 Button("다시 시도") { Task { await loadMonth(selection: selectionKey) } }
@@ -353,7 +366,13 @@ struct ContentView: View {
                     Text("제공처 일정이 일부만 수집되었을 수 있어요.").font(.caption).foregroundStyle(.secondary)
                 }
             }
-            if let selectedDate { dayList(selectedDate) }
+            if let selectedDate { dayList(selectedDate) } else if calendar != nil {
+                Label("날짜를 선택하면 공개 예정 콘텐츠를 볼 수 있어요", systemImage: "hand.tap")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.54))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 16)
+            }
         }
     }
 
@@ -461,15 +480,22 @@ struct ContentView: View {
                                     .foregroundStyle(selected ? ink : .white)
                                     .frame(width: 37, height: 37)
                                     .background(selected ? lime : .clear, in: Circle())
-                                Circle()
-                                    .fill((day?.total ?? 0) > 0 ? lime : .clear)
-                                    .frame(width: 5, height: 5)
+                                if let total = day?.total, total > 0 {
+                                    Text(total > 99 ? "99+" : "\(total)")
+                                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                                        .foregroundStyle(selected ? lime : .white.opacity(0.76))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.7)
+                                } else {
+                                    Circle().fill(.clear).frame(width: 5, height: 12)
+                                }
                             }
                             .frame(maxWidth: .infinity)
                             .frame(height: 57)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(date), \(day?.total ?? 0)개 일정")
+                        .accessibilityAddTraits(selected ? [.isSelected] : [])
                     }
                 }
             }
@@ -485,13 +511,23 @@ struct ContentView: View {
                 .font(.system(size: 13, weight: .heavy, design: .rounded))
                 .tracking(1.2)
                 .foregroundStyle(lime)
-            if loadingDay { ProgressView("전체 일정 불러오는 중 · 미리보기 표시 중") }
+            if loadingDay {
+                HStack(spacing: 8) {
+                    ProgressView().tint(lime)
+                    Text(events.isEmpty ? "일정을 불러오는 중" : "전체 일정 확인 중 · 미리보기 표시")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.68))
+                }
+                .padding(.vertical, 7)
+            }
             if let dayError {
                 Text(dayError).foregroundStyle(.red).font(.footnote)
                 Button("다시 시도") { Task { await loadDay(date, selection: selectionKey) } }
             }
             if !loadingDay && dayError == nil && events.isEmpty {
-                Text("확인된 일정이 없어요.").foregroundStyle(.secondary)
+                ContentUnavailableView("이날은 일정이 없어요", systemImage: "calendar.badge.clock",
+                    description: Text("다른 날짜를 선택하거나 분야·플랫폼 필터를 조정해 보세요."))
+                    .frame(maxWidth: .infinity)
             }
             ForEach(events) { item in
                 HStack(spacing: 8) {
@@ -508,7 +544,11 @@ struct ContentView: View {
                                         Text(item.statusTitle).font(.caption).foregroundStyle(.red)
                                     }
                                 }
-                                Text(item.title).font(.body.bold())
+                                Text(item.title)
+                                    .font(.system(.body, design: .rounded, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
                                 if item.kind == "ott_season_premiere" {
                                     HStack(spacing: 5) {
                                         ForEach(item.services, id: \.self) { service in
@@ -525,13 +565,18 @@ struct ContentView: View {
                                         }
                                     }
                                 }
-                                Text(item.time.description).font(.caption).foregroundStyle(.secondary)
+                                Text(item.time.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.white.opacity(0.55))
+                                    .lineLimit(2)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
                         .background(panel, in: RoundedRectangle(cornerRadius: 18))
+                        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(.white.opacity(0.07)))
+                        .accessibilityElement(children: .combine)
                     }
                     .buttonStyle(.plain)
                 if account.user != nil {
@@ -549,6 +594,7 @@ struct ContentView: View {
                             .foregroundStyle(saved ? .red : .secondary)
                     }
                     .accessibilityLabel(saved ? "찜 해제" : "찜")
+                    .frame(width: 44, height: 44)
                 }
                 }
             }
@@ -669,13 +715,21 @@ private struct EventDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text(displayedEvent.title).font(.title2.bold())
+                Text(displayedEvent.categoryTitle.uppercased())
+                    .font(.caption.bold())
+                    .tracking(2)
+                    .foregroundStyle(Color(red: 0.86, green: 0.99, blue: 0.42))
+                Text(displayedEvent.title)
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .fixedSize(horizontal: false, vertical: true)
                 PosterArtwork(urlString: content?.posterUrl, isLoading: isContentLoading)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 290)
+                    .frame(height: 340)
                     .accessibilityLabel("\(displayedEvent.title) 포스터")
                 if let synopsis = content?.synopsis, !synopsis.isEmpty {
+                    Text("작품 소개").font(.headline)
                     Text(synopsis).font(.subheadline).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 LabeledContent("분야", value: displayedEvent.categoryTitle)
                 LabeledContent("일정", value: displayedEvent.time.description)
@@ -709,6 +763,7 @@ private struct EventDetailView: View {
                 if let error { Text(error).font(.caption).foregroundStyle(.red) }
             }.padding()
         }
+        .background(Color(red: 0.067, green: 0.078, blue: 0.067).ignoresSafeArea())
         .navigationTitle("일정 상세")
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("닫기") { dismiss() } } }
         .task {

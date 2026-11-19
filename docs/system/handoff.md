@@ -1,3 +1,9 @@
+## UI-04 · 앱 디스커버리 화면 마무리 (2026-11-19)
+
+- app origin/main `323f6f0` 기반 분리 작업 `codex/ui-polish-complete-20261119`. UI-03의 미리보기·날짜 캐시 통합과 캘린더 건수/상태/필터·카드·상세 UI 개선. 원본 `docs/ai/tasks/UI-04-polish-complete.md`.
+- `xcodebuild` unsigned 시뮬레이터 BUILD SUCCEEDED, `sh scripts/check-account-flow.sh` 15/15, `git diff --check` 성공. CoreSimulatorService 연결 장애로 실제 앱 실행 확인 대기. 독립 검증 및 승인 미실행.
+- backend/API 계약·migration, verifier acceptance/verdict 변경 없음. 사용자 checkout의 개인 pbxproj 및 HTML 수정 보존. ADR/LEARN 신규 해당 없음. 최종 원격 병합 SHA는 GitHub 조회 기준으로 확인.
+
 ## UI-03 · 날짜별 조회 캐시·게임 기본 노출 (2026-11-19)
 
 - 원본 `docs/ai/tasks/UI-03-day-fetch-performance.md`. 달력 미리보기 즉시 표시·동일 카탈로그 버전 날짜 조회 캐시·신규/로그아웃 기본 게임 카테고리 활성화. 기존 저장 필터 유지.
