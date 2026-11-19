@@ -731,6 +731,7 @@ private struct EventDetailView: View {
     @State private var retryCount = 0
     @State private var content: CatalogContent?
     @State private var isContentLoading = false
+    @State private var contentFailed = false
 
     private var displayedEvent: ReleaseEvent { detail?.event ?? event }
     private var statusColor: Color {
@@ -789,6 +790,7 @@ private struct EventDetailView: View {
         }
         .task(id: displayedEvent.contentId) {
             content = nil
+            contentFailed = false
             guard let id = displayedEvent.contentId else { isContentLoading = false; return }
             isContentLoading = true
             defer { if !Task.isCancelled { isContentLoading = false } }
@@ -796,7 +798,9 @@ private struct EventDetailView: View {
                 let result = try await api.content(id: id)
                 try Task.checkCancellation()
                 content = result
-            } catch { /* 일정은 작품 이미지와 별도로 표시한다. */ }
+            } catch {
+                if !Task.isCancelled { contentFailed = true }
+            }
         }
     }
 
@@ -806,8 +810,13 @@ private struct EventDetailView: View {
             : AnyLayout(HStackLayout(alignment: .center, spacing: 16))
 
         return layout {
-            PosterArtwork(urlString: content?.posterUrl, isLoading: isContentLoading)
-                .frame(width: 112, height: 168)
+            PosterArtwork(
+                urlString: content?.posterUrl,
+                isLoading: isContentLoading,
+                lookupFailed: contentFailed,
+                imageLabel: "\(displayedEvent.title) 포스터"
+            )
+            .frame(width: 112, height: 168)
             VStack(alignment: .leading, spacing: 10) {
                 Text(displayedEvent.categoryTitle)
                     .font(.subheadline.weight(.semibold))
@@ -869,19 +878,17 @@ private struct EventDetailView: View {
     private var updatedAtLabel: String {
         let iso = ISO8601DateFormatter()
         iso.formatOptions.insert(.withFractionalSeconds)
-        var date = iso.date(from: displayedEvent.updatedAt)
-        if date == nil {
+        let hasFraction = iso.date(from: displayedEvent.updatedAt) != nil
+        if !hasFraction {
             iso.formatOptions.remove(.withFractionalSeconds)
-            date = iso.date(from: displayedEvent.updatedAt)
         }
-        guard let date, let zone = TimeZone(identifier: filters.timeZone) else {
+        guard let date = iso.date(from: displayedEvent.updatedAt), let zone = TimeZone(identifier: filters.timeZone) else {
             return displayedEvent.updatedAt
         }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ko_KR")
         formatter.timeZone = zone
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
+        formatter.setLocalizedDateFormatFromTemplate(hasFraction ? "yMd HmsSSS" : "yMd Hms")
         return "\(formatter.string(from: date)) · \(zone.abbreviation(for: date) ?? zone.identifier)"
     }
 
@@ -971,6 +978,8 @@ private struct PosterArtwork: View {
     let urlString: String?
     var isLoading = false
     var compact = false
+    var lookupFailed = false
+    var imageLabel = ""
 
     private var posterURL: URL? {
         guard let urlString, let url = URL(string: urlString),
@@ -988,20 +997,20 @@ private struct PosterArtwork: View {
                             if compact {
                                 image.resizable().scaledToFill()
                             } else {
-                                image.resizable().scaledToFit()
+                                image.resizable().scaledToFit().accessibilityLabel(imageLabel)
                             }
                         case .empty:
                             ProgressView()
                         case .failure:
-                            placeholder
+                            placeholder("포스터 로딩 실패")
                         @unknown default:
-                            placeholder
+                            placeholder("포스터 로딩 실패")
                         }
                     }
                 } else if isLoading {
                     ProgressView()
                 } else {
-                    placeholder
+                    placeholder(lookupFailed ? "포스터 조회 실패" : "포스터 없음")
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
@@ -1009,14 +1018,20 @@ private struct PosterArtwork: View {
         }
         .background(.white.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: compact ? 8 : 12))
-        .accessibilityHidden(true)
+        .accessibilityHidden(compact)
     }
 
-    private var placeholder: some View {
+    private func placeholder(_ message: String) -> some View {
         VStack(spacing: 4) {
             Image(systemName: "photo")
                 .font(compact ? .title3 : .title)
-            if !compact { Text("포스터 없음").font(.caption) }
+                .accessibilityHidden(true)
+            if !compact {
+                Text(message)
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 6)
+            }
         }
         .foregroundStyle(.secondary)
     }
