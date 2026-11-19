@@ -1,3 +1,9 @@
+## UI-04 · 앱 디스커버리 화면 마무리 (2026-11-19)
+
+- app origin/main `323f6f0` 기반 분리 작업 `codex/ui-polish-complete-20261119`. UI-03의 미리보기·날짜 캐시 통합과 캘린더 건수/상태/필터·카드·상세 UI 개선. 원본 `docs/ai/tasks/UI-04-polish-complete.md`.
+- `xcodebuild` unsigned 시뮬레이터 BUILD SUCCEEDED, `sh scripts/check-account-flow.sh` 15/15, `git diff --check` 성공. CoreSimulatorService 연결 장애로 실제 앱 실행 확인 대기. 독립 검증 및 승인 미실행.
+- backend/API 계약·migration, verifier acceptance/verdict 변경 없음. 사용자 checkout의 개인 pbxproj 및 HTML 수정 보존. ADR/LEARN 신규 해당 없음. 최종 원격 병합 SHA는 GitHub 조회 기준으로 확인.
+
 ## APP-UI-01 · 월간 달력 가독성·상단 공간 개선 (2026-11-18)
 
 - `dev` 기반 `codex/calendar-readability-20261118`에서 계정·동기화 컨트롤을 우상단 버튼의 시트로 옮겨 달력 화면 공간을 확보했다. 월 이동, 카테고리, 필터, 날짜별 조회는 유지했다. 날짜 셀의 숫자·대표 일정 제목과 전체 건수를 명확히 표시한다.
