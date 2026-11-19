@@ -5,7 +5,7 @@ struct ContentView: View {
     @StateObject private var account = AccountState()
     @State private var month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
     @State private var selectedDate: String?
-    @AppStorage("temporaryVisibleCategories") private var storedCategories = "movie,ott"
+    @AppStorage("temporaryVisibleCategories") private var storedCategories = "movie,ott,game"
     @AppStorage("temporaryCountry") private var storedCountry = ""
     @AppStorage("temporaryTimeZone") private var storedTimeZone = ""
     @AppStorage("temporaryServices") private var storedServices = ""
@@ -22,6 +22,7 @@ struct ContentView: View {
     @State private var loading = false
     @State private var loadingDay = false
     @State private var dayRequestID = UUID()
+    @State private var dayCache: [String: [ReleaseEvent]] = [:]
     @State private var errorText: String?
     @State private var dayError: String?
     @State private var selectedEvent: ReleaseEvent?
@@ -310,7 +311,7 @@ struct ContentView: View {
     }
 
     private func resetDeviceFilters() {
-        storedCategories = "movie,ott"
+        storedCategories = "movie,ott,game"
         storedCountry = ""
         storedTimeZone = ""
         storedServices = ""
@@ -448,7 +449,12 @@ struct ContentView: View {
                         let date = String(format: "%@-%02d", monthKey, number)
                         let day = days[date]
                         let selected = selectedDate == date
-                        Button { selectedDate = date } label: {
+                        Button {
+                            selectedDate = date
+                            events = days[date]?.previews ?? []
+                            dayError = nil
+                            loadingDay = true
+                        } label: {
                             VStack(spacing: 5) {
                                 Text("\(number)")
                                     .font(.system(size: 15, weight: selected ? .black : .medium, design: .rounded))
@@ -479,7 +485,7 @@ struct ContentView: View {
                 .font(.system(size: 13, weight: .heavy, design: .rounded))
                 .tracking(1.2)
                 .foregroundStyle(lime)
-            if loadingDay { ProgressView("일정 불러오는 중") }
+            if loadingDay { ProgressView("전체 일정 불러오는 중 · 미리보기 표시 중") }
             if let dayError {
                 Text(dayError).foregroundStyle(.red).font(.footnote)
                 Button("다시 시도") { Task { await loadDay(date, selection: selectionKey) } }
@@ -610,13 +616,20 @@ struct ContentView: View {
         guard let revision = calendar?.catalogRevision else { return }
         let requestID = UUID()
         dayRequestID = requestID
-        events = []
+        let cacheKey = [selection, revision, date].joined(separator: "|")
         dayError = nil
+        if let cached = dayCache[cacheKey] {
+            events = cached
+            loadingDay = false
+            return
+        }
+        events = days[date]?.previews ?? []
         loadingDay = true
         defer { if selectedDate == date && selection == selectionKey && dayRequestID == requestID && calendar?.catalogRevision == revision { loadingDay = false } }
         do {
             let result = try await api.events(date: date, filters: filters, revision: revision)
             guard !Task.isCancelled, selectedDate == date, selection == selectionKey, dayRequestID == requestID, calendar?.catalogRevision == revision else { return }
+            dayCache[cacheKey] = result
             events = result
         }
         catch PublicAPIError.catalogChanged {
@@ -628,6 +641,7 @@ struct ContentView: View {
                 calendar = updated
                 lastCalendars[selection] = updated
                 showingCachedCalendar = false
+                dayCache[[selection, updated.catalogRevision, date].joined(separator: "|")] = result
                 events = result
             } catch {
                 if !Task.isCancelled && selectedDate == date && selection == selectionKey && dayRequestID == requestID && calendar?.catalogRevision == revision { dayError = error.localizedDescription }
