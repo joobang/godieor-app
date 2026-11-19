@@ -1,3 +1,8 @@
+## UI-06 · 홈과 일정 상세 리디자인 (2026-11-19)
+
+- 오늘 일정이 기본으로 보이는 달력, 분야 색상과 상단 필터, 포스터 중심 상세 및 출처 표시를 적용했다. 원본 app `docs/ai/tasks/UI-06-discovery-redesign.md`.
+- iPhone 17 Simulator에서 날짜 이동·필터·상세·큰 글자 확인, 계정 회귀 15/15, 개발 서명 빌드 3 성공. 독립 iOS 빌드 PASS, 전체 runner ERROR. 공통 revision SYNC-2026-11-19-UI-06.
+
 ## UI-05 · 일정 상세 포스터 겹침 수정 (2026-11-19)
 
 - iPhone 17 Simulator에서 세로 포스터가 제목·일정에 겹침을 재현했다. 상세 요약과 공개 정보/소개/출처를 나누고 포스터/이미지 실패 영역을 고정했다. 원본 app `docs/ai/tasks/UI-05-event-detail.md`.
