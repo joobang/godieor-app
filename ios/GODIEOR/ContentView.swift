@@ -55,54 +55,87 @@ struct ContentView: View {
     }
     private var days: [String: ReleaseDay] { Dictionary(uniqueKeysWithValues: (calendar?.days ?? []).map { ($0.date, $0) }) }
 
+    private let ink = Color(red: 0.067, green: 0.078, blue: 0.067)
+    private let lime = Color(red: 0.86, green: 0.99, blue: 0.42)
+    private let panel = Color(red: 0.12, green: 0.14, blue: 0.12)
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 23) {
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("GODIEOR.")
+                                .font(.system(size: 32, weight: .black, design: .rounded))
+                                .tracking(-1.8)
+                                .foregroundStyle(.white)
+                            Text("좋아하는 순간이 곧 이어져요")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.52))
+                        }
+                        Spacer()
+                        Button { showingAccount = true } label: {
+                            Image(systemName: account.user == nil ? "person.crop.circle" : "person.crop.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(lime)
+                                .frame(width: 47, height: 47)
+                                .background(panel, in: Circle())
+                        }
+                        .accessibilityLabel("계정 및 동기화 설정")
+                    }
+                    HStack(spacing: 12) {
+                        Text("DISCOVER")
+                            .font(.system(size: 11, weight: .black, design: .rounded))
+                            .tracking(2.5)
+                            .foregroundStyle(lime)
+                        Rectangle().fill(.white.opacity(0.16)).frame(height: 1)
+                    }
+                    categoryStories
+                    serviceChips
                     HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(monthKey.replacingOccurrences(of: "-", with: "."))
+                                .font(.system(size: 30, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                            Text("\(filters?.country ?? "지역 확인 중") · \(filters?.timeZone ?? "시간대 확인 중")")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.52))
+                        }
+                        Spacer()
                         Button { moveMonth(-1) } label: { Image(systemName: "chevron.left") }
                             .accessibilityLabel("이전 달")
-                        Spacer()
-                        Text(monthKey.replacingOccurrences(of: "-", with: "년 ") + "월")
-                            .font(.title3.bold())
-                        Spacer()
                         Button { moveMonth(1) } label: { Image(systemName: "chevron.right") }
                             .accessibilityLabel("다음 달")
                         Button("오늘") {
                             month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
                             selectedDate = nil
-                        }.font(.caption)
-                    }.buttonStyle(.bordered)
-                    HStack(spacing: 6) {
-                        ForEach(options, id: \.0) { option in
-                            Button(option.1) {
-                                var selected = activeCategories
-                                if !selected.insert(option.0).inserted { selected.remove(option.0) }
-                                storedCategories = options.map(\.0).filter { selected.contains($0) }.joined(separator: ",")
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(activeCategories.contains(option.0) ? .accentColor : .gray)
                         }
+                        .font(.caption.bold())
                     }
-                    HStack {
-                        Text("\(filters?.country ?? "지역 확인 중") · \(filters?.timeZone ?? "시간대 확인 중") · 공개 일정")
-                            .font(.caption).foregroundStyle(.secondary)
-                        Spacer()
-                        Button("필터") { showingFilters = true }.disabled(catalogOptions == nil)
-                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
                     calendarContent
-                }.padding(.horizontal, 12).padding(.vertical, 8)
-            }
-            .navigationTitle("GODIEOR")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingAccount = true } label: {
-                        Image(systemName: account.user == nil ? "person.crop.circle" : "person.crop.circle.fill")
+                    HStack {
+                        Label("캘린더", systemImage: "calendar")
+                            .foregroundStyle(lime)
+                        Spacer()
+                        Button { showingFilters = true } label: {
+                            Label("상세 필터", systemImage: "slider.horizontal.3")
+                        }
+                        .disabled(catalogOptions == nil)
                     }
-                    .accessibilityLabel("계정 및 동기화 설정")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(17)
+                    .background(panel, in: RoundedRectangle(cornerRadius: 20))
                 }
+                .padding(.horizontal, 18)
+                .padding(.top, 18)
+                .padding(.bottom, 42)
             }
+            .background(ink.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
+            .preferredColorScheme(.dark)
             .sheet(item: $selectedEvent) { event in
                 if let filters { NavigationStack { EventDetailView(event: event, filters: filters, api: api) } }
             }
@@ -121,7 +154,6 @@ struct ContentView: View {
             }
             .onChange(of: account.settings?.version) { _, _ in applyAccountSettings() }
             .onChange(of: account.user?.id) { previous, current in
-                // Account settings must not remain in shared device preferences after logout.
                 if previous != nil && previous != current { resetDeviceFilters() }
                 if current != nil { applyAccountSettings() }
             }
@@ -136,6 +168,72 @@ struct ContentView: View {
             .task(id: selectionKey) { await loadMonth(selection: selectionKey) }
             .task(id: daySelectionKey) {
                 if let selectedDate { await loadDay(selectedDate, selection: selectionKey) }
+            }
+        }
+    }
+
+    private var categoryStories: some View {
+        HStack(spacing: 0) {
+            ForEach(options, id: \.0) { option in
+                let selected = activeCategories.contains(option.0)
+                Button {
+                    var next = activeCategories
+                    if !next.insert(option.0).inserted { next.remove(option.0) }
+                    storedCategories = options.map(\.0).filter { next.contains($0) }.joined(separator: ",")
+                } label: {
+                    VStack(spacing: 9) {
+                        Image(systemName: categorySymbol(option.0))
+                            .font(.system(size: 23, weight: .medium))
+                            .foregroundStyle(selected ? ink : .white)
+                            .frame(width: 64, height: 64)
+                            .background(selected ? lime : panel, in: Circle())
+                            .overlay(Circle().strokeBorder(selected ? lime : .white.opacity(0.16), lineWidth: 2))
+                        Text(option.1)
+                            .font(.caption.weight(selected ? .bold : .medium))
+                            .foregroundStyle(selected ? .white : .white.opacity(0.5))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(option.1) \(selected ? "선택됨" : "선택 안 됨")")
+            }
+        }
+    }
+
+    private func categorySymbol(_ category: String) -> String {
+        switch category {
+        case "movie": "film.stack"
+        case "ott": "play.rectangle.on.rectangle"
+        case "game": "gamecontroller"
+        case "epl": "soccerball"
+        default: "sparkles"
+        }
+    }
+
+    private var serviceChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 9) {
+                ForEach(["netflix", "disney_plus", "tving", "coupang_play"], id: \.self) { service in
+                    let active = activeServices.contains(service)
+                    Button {
+                        var next = activeServices
+                        if !next.insert(service).inserted { next.remove(service) }
+                        storedServices = next.sorted().joined(separator: ",")
+                    } label: {
+                        HStack(spacing: 7) {
+                            PlatformIcon(key: service, size: 22)
+                            Text(ottName(service))
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .frame(height: 39)
+                        .background(active ? Color.white.opacity(0.2) : panel, in: Capsule())
+                        .overlay(Capsule().strokeBorder(active ? lime : .white.opacity(0.1), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(ottName(service)) \(active ? "필터 선택됨" : "필터 미선택")")
+                }
             }
         }
     }
@@ -332,45 +430,37 @@ struct ContentView: View {
     private var monthGrid: some View {
         let offset = CalendarDay.iso.component(.weekday, from: month) - 1
         let count = CalendarDay.iso.range(of: .day, in: .month, for: month)!.count
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 3), count: 7)
-        return VStack(spacing: 8) {
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
+        return VStack(spacing: 11) {
             HStack {
                 ForEach(["일", "월", "화", "수", "목", "금", "토"], id: \.self) { label in
-                    Text(label).font(.caption.bold()).frame(maxWidth: .infinity)
+                    Text(label)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.44))
+                        .frame(maxWidth: .infinity)
                 }
             }
-            LazyVGrid(columns: columns, spacing: 4) {
+            LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(0..<(offset + count), id: \.self) { index in
-                    if index < offset { Color.clear.frame(height: 82) }
+                    if index < offset { Color.clear.frame(height: 57) }
                     else {
                         let number = index - offset + 1
                         let date = String(format: "%@-%02d", monthKey, number)
                         let day = days[date]
-                        Button {
-                            selectedDate = date
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(spacing: 1) {
-                                    Text("\(number)").font(.system(size: 13, weight: .bold))
-                                    Spacer(minLength: 0)
-                                    if let day, day.total > 0 {
-                                        Text("\(day.total)")
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundStyle(.tint)
-                                    }
-                                }
-                                if let day, day.total > 0 {
-                                    Text(day.previews.first?.title ?? "일정")
-                                        .font(.system(size: 11, weight: .medium))
-                                        .lineLimit(2)
-                                        .multilineTextAlignment(.leading)
-                                }
-                                Spacer(minLength: 0)
+                        let selected = selectedDate == date
+                        Button { selectedDate = date } label: {
+                            VStack(spacing: 5) {
+                                Text("\(number)")
+                                    .font(.system(size: 15, weight: selected ? .black : .medium, design: .rounded))
+                                    .foregroundStyle(selected ? ink : .white)
+                                    .frame(width: 37, height: 37)
+                                    .background(selected ? lime : .clear, in: Circle())
+                                Circle()
+                                    .fill((day?.total ?? 0) > 0 ? lime : .clear)
+                                    .frame(width: 5, height: 5)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .frame(height: 76, alignment: .top)
-                            .padding(3)
-                            .background(selectedDate == date ? Color.accentColor.opacity(0.2) : Color.gray.opacity(0.08), in: RoundedRectangle(cornerRadius: 7))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 57)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(date), \(day?.total ?? 0)개 일정")
@@ -378,11 +468,17 @@ struct ContentView: View {
                 }
             }
         }
+        .padding(.vertical, 18)
+        .padding(.horizontal, 8)
+        .background(panel, in: RoundedRectangle(cornerRadius: 24))
     }
 
     private func dayList(_ date: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\(date) · \(days[date]?.total ?? 0)건").font(.headline)
+            Text("UP NEXT  ·  \(date)  ·  \(days[date]?.total ?? 0)건")
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .tracking(1.2)
+                .foregroundStyle(lime)
             if loadingDay { ProgressView("일정 불러오는 중") }
             if let dayError {
                 Text(dayError).foregroundStyle(.red).font(.footnote)
@@ -393,31 +489,45 @@ struct ContentView: View {
             }
             ForEach(events) { item in
                 HStack(spacing: 8) {
-                Button { selectedEvent = item } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(item.categoryTitle).font(.caption.bold())
-                            if item.dataOrigin == "fixture" { Text("가상").font(.caption).foregroundStyle(.orange) }
-                            if item.status != "scheduled" { Text(item.statusTitle).font(.caption).foregroundStyle(.red) }
-                        }
-                        Text(item.title).font(.body.bold())
-                        if item.kind == "ott_season_premiere" {
-                            HStack(spacing: 5) {
-                                ForEach(item.services, id: \.self) { service in
-                                    Text(ottMark(service))
-                                        .font(.caption2.bold())
-                                        .padding(.horizontal, 7).padding(.vertical, 3)
-                                        .background(Color.accentColor.opacity(0.14), in: Capsule())
-                                        .accessibilityLabel(ottName(service))
+                    Button { selectedEvent = item } label: {
+                        HStack(alignment: .top, spacing: 12) {
+                            EventPosterThumbnail(contentId: item.contentId, api: api)
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(item.categoryTitle).font(.caption.bold())
+                                    if item.dataOrigin == "fixture" {
+                                        Text("가상").font(.caption).foregroundStyle(.orange)
+                                    }
+                                    if item.status != "scheduled" {
+                                        Text(item.statusTitle).font(.caption).foregroundStyle(.red)
+                                    }
                                 }
+                                Text(item.title).font(.body.bold())
+                                if item.kind == "ott_season_premiere" {
+                                    HStack(spacing: 5) {
+                                        ForEach(item.services, id: \.self) { service in
+                                            PlatformIcon(key: service, size: 22)
+                                                .accessibilityLabel(ottName(service))
+                                        }
+                                    }
+                                }
+                                if !item.devices.isEmpty {
+                                    HStack(spacing: 6) {
+                                        ForEach(item.devices, id: \.self) { device in
+                                            PlatformIcon(key: device, size: 22)
+                                                .accessibilityLabel(gameDeviceLabel(device))
+                                        }
+                                    }
+                                }
+                                Text(item.time.description).font(.caption).foregroundStyle(.secondary)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        Text(item.time.description).font(.caption).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(panel, in: RoundedRectangle(cornerRadius: 18))
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
-                }.buttonStyle(.plain)
+                    .buttonStyle(.plain)
                 if account.user != nil {
                     let saved = item.contentId.map { account.favoriteContentIDs.contains($0) } ?? account.favoriteEventIDs.contains(item.id)
                     Button {
@@ -538,6 +648,7 @@ private struct EventDetailView: View {
     @State private var detail: ReleaseDetail?
     @State private var error: String?
     @State private var content: CatalogContent?
+    @State private var isContentLoading = false
 
     private var displayedEvent: ReleaseEvent { detail?.event ?? event }
 
@@ -545,27 +656,10 @@ private struct EventDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text(displayedEvent.title).font(.title2.bold())
-                if let poster = content?.posterUrl,
-                   let url = URL(string: poster), url.scheme?.lowercased() == "https",
-                   url.host != nil {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFit()
-                        case .empty:
-                            ProgressView().frame(maxWidth: .infinity, minHeight: 180)
-                        case .failure:
-                            posterPlaceholder
-                        @unknown default:
-                            posterPlaceholder
-                        }
-                    }
+                PosterArtwork(urlString: content?.posterUrl, isLoading: isContentLoading)
                     .frame(maxWidth: .infinity)
-                    .frame(maxHeight: 300)
+                    .frame(height: 290)
                     .accessibilityLabel("\(displayedEvent.title) 포스터")
-                } else {
-                    posterPlaceholder
-                }
                 if let synopsis = content?.synopsis, !synopsis.isEmpty {
                     Text(synopsis).font(.subheadline).foregroundStyle(.secondary)
                 }
@@ -610,21 +704,132 @@ private struct EventDetailView: View {
         }
         .task(id: displayedEvent.contentId) {
             content = nil
-            guard let id = displayedEvent.contentId else { return }
+            guard let id = displayedEvent.contentId else { isContentLoading = false; return }
+            isContentLoading = true
+            defer { isContentLoading = false }
             do { content = try await api.content(id: id) }
+            catch is CancellationError { return }
             catch { /* 포스터 조회 실패 시 일정 상세는 그대로 표시한다. */ }
         }
     }
 
-    private var posterPlaceholder: some View {
-        RoundedRectangle(cornerRadius: 14)
-            .fill(.quaternary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 130)
-            .overlay {
-                Label("포스터 준비 중", systemImage: "photo")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+}
+
+private struct EventPosterThumbnail: View {
+    let contentId: String?
+    let api: PublicAPI
+    @State private var posterURL: String?
+    @State private var isLoading = false
+
+    var body: some View {
+        PosterArtwork(urlString: posterURL, isLoading: isLoading, compact: true)
+            .frame(width: 70, height: 98)
+            .task(id: contentId) {
+                posterURL = nil
+                guard let contentId else { isLoading = false; return }
+                isLoading = true
+                defer { isLoading = false }
+                do { posterURL = try await api.content(id: contentId).posterUrl }
+                catch is CancellationError { return }
+                catch { /* 서버에 이미지가 없어도 일정 텍스트를 표시한다. */ }
             }
+    }
+}
+
+private struct PosterArtwork: View {
+    let urlString: String?
+    var isLoading = false
+    var compact = false
+
+    private var posterURL: URL? {
+        guard let urlString, let url = URL(string: urlString),
+              url.scheme?.lowercased() == "https", url.host != nil else { return nil }
+        return url
+    }
+
+    var body: some View {
+        Group {
+            if let posterURL {
+                AsyncImage(url: posterURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    case .empty:
+                        ProgressView()
+                    case .failure:
+                        placeholder
+                    @unknown default:
+                        placeholder
+                    }
+                }
+            } else if isLoading {
+                ProgressView()
+            } else {
+                placeholder
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.quaternary)
+        .clipShape(RoundedRectangle(cornerRadius: compact ? 8 : 14))
+        .accessibilityHidden(compact)
+    }
+
+    private var placeholder: some View {
+        VStack(spacing: 4) {
+            Image(systemName: "photo")
+                .font(compact ? .title3 : .title)
+            if !compact { Text("포스터 준비 중").font(.subheadline) }
+        }
+        .foregroundStyle(.secondary)
+    }
+}
+
+
+// Brand favicons are loaded from the actual platform domains. A readable fallback
+// remains visible when the icon endpoint is offline.
+private struct PlatformIcon: View {
+    let key: String
+    var size: CGFloat = 24
+
+    private var domain: String? {
+        switch key.lowercased() {
+        case "netflix": "netflix.com"
+        case "disney_plus": "disneyplus.com"
+        case "tving": "tving.com"
+        case "coupang_play": "coupangplay.com"
+        case "playstation": "playstation.com"
+        case "xbox": "xbox.com"
+        case "switch": "nintendo.com"
+        case "ios": "apple.com"
+        case "android": "android.com"
+        case "pc": "microsoft.com"
+        default: nil
+        }
+    }
+
+    var body: some View {
+        Group {
+            if let domain, let url = URL(string: "https://www.google.com/s2/favicons?domain=\(domain)&sz=128") {
+                AsyncImage(url: url) { phase in
+                    if case let .success(image) = phase {
+                        image.resizable().scaledToFit()
+                    } else {
+                        fallback
+                    }
+                }
+            } else {
+                fallback
+            }
+        }
+        .frame(width: size, height: size)
+        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: size * 0.25))
+        .clipShape(RoundedRectangle(cornerRadius: size * 0.25))
+    }
+
+    private var fallback: some View {
+        Image(systemName: "play.square.fill")
+            .resizable()
+            .scaledToFit()
+            .foregroundStyle(.white.opacity(0.65))
     }
 }
