@@ -4,6 +4,11 @@
 - `xcodebuild` unsigned 시뮬레이터 BUILD SUCCEEDED, `sh scripts/check-account-flow.sh` 15/15, `git diff --check` 성공. CoreSimulatorService 연결 장애로 실제 앱 실행 확인 대기. 독립 검증 및 승인 미실행.
 - backend/API 계약·migration, verifier acceptance/verdict 변경 없음. 사용자 checkout의 개인 pbxproj 및 HTML 수정 보존. ADR/LEARN 신규 해당 없음. 최종 원격 병합 SHA는 GitHub 조회 기준으로 확인.
 
+## UI-03 · 날짜별 조회 캐시·게임 기본 노출 (2026-11-19)
+
+- 원본 `docs/ai/tasks/UI-03-day-fetch-performance.md`. 달력 미리보기 즉시 표시·동일 카탈로그 버전 날짜 조회 캐시·신규/로그아웃 기본 게임 카테고리 활성화. 기존 저장 필터 유지.
+- 2026-11-19 운영 API 게임 11월 370건, GTA6 출시일 11/19 게임 0건 확인. 원격 게임 게시 복구는 별도 backend 후속. 자체 unsigned iOS Simulator 빌드 성공, 실제 화면 및 독립 검증 미확인.
+
 ## APP-UI-01 · 월간 달력 가독성·상단 공간 개선 (2026-11-18)
 
 - `dev` 기반 `codex/calendar-readability-20261118`에서 계정·동기화 컨트롤을 우상단 버튼의 시트로 옮겨 달력 화면 공간을 확보했다. 월 이동, 카테고리, 필터, 날짜별 조회는 유지했다. 날짜 셀의 숫자·대표 일정 제목과 전체 건수를 명확히 표시한다.
