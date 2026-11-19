@@ -1,9 +1,31 @@
 import SwiftUI
 
 private enum DiscoveryPalette {
-    static let ink = Color(red: 0.067, green: 0.078, blue: 0.067)
-    static let lime = Color(red: 0.86, green: 0.99, blue: 0.42)
-    static let panel = Color(red: 0.12, green: 0.14, blue: 0.12)
+    static let ink = Color(red: 0.054, green: 0.059, blue: 0.090)
+    static let lime = Color(red: 0.84, green: 0.98, blue: 0.54)
+    static let panel = Color(red: 0.096, green: 0.104, blue: 0.153)
+    static let text = Color(red: 0.97, green: 0.96, blue: 0.93)
+    static let muted = Color(red: 0.68, green: 0.70, blue: 0.76)
+    static let line = Color.white.opacity(0.095)
+
+    static func accent(_ key: String) -> Color {
+        switch key {
+        case "movie", "theatrical_release": Color(red: 1, green: 0.72, blue: 0.55)
+        case "ott", "ott_season_premiere": Color(red: 0.78, green: 0.71, blue: 1)
+        case "epl", "epl_match": Color(red: 0.53, green: 0.82, blue: 0.99)
+        default: lime
+        }
+    }
+
+    static func symbol(_ key: String) -> String {
+        switch key {
+        case "movie", "theatrical_release": "film"
+        case "ott", "ott_season_premiere": "play.rectangle"
+        case "game", "game_release": "gamecontroller"
+        case "epl", "epl_match": "soccerball"
+        default: "calendar"
+        }
+    }
 }
 
 struct ContentView: View {
@@ -15,6 +37,7 @@ struct ContentView: View {
     @StateObject private var account = AccountState()
     @State private var month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
     @State private var selectedDate: String?
+    @State private var shouldSelectToday = true
     @AppStorage("temporaryVisibleCategories") private var storedCategories = "movie,ott,game"
     @AppStorage("temporaryCountry") private var storedCountry = ""
     @AppStorage("temporaryTimeZone") private var storedTimeZone = ""
@@ -33,7 +56,6 @@ struct ContentView: View {
     @State private var loadingDay = false
     @State private var dayRequestID = UUID()
     @State private var dayCache: [String: [ReleaseEvent]] = [:]
-    @State private var selectedDayHasPreview = false
     @State private var errorText: String?
     @State private var dayError: String?
     @State private var selection: DetailSelection?
@@ -68,91 +90,40 @@ struct ContentView: View {
         return ([monthKey, filters.country, filters.timeZone] + filters.categories + ["services"] + filters.services + ["devices"] + filters.devices).joined(separator: ":")
     }
     private var daySelectionKey: String {
-        [selectedDate ?? "", selectionKey, calendar?.catalogRevision ?? ""].joined(separator: ":")
+        [selectedDate ?? "", selectionKey, calendar?.month ?? "", calendar?.catalogRevision ?? ""].joined(separator: ":")
     }
     private var days: [String: ReleaseDay] { Dictionary(uniqueKeysWithValues: (calendar?.days ?? []).map { ($0.date, $0) }) }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 23) {
-                    HStack(alignment: .center) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("GODIEOR.")
-                                .font(.system(size: 32, weight: .black, design: .rounded))
-                                .tracking(-1.8)
-                                .foregroundStyle(.white)
-                            Text("좋아하는 순간이 곧 이어져요")
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.52))
+                VStack(alignment: .leading, spacing: 20) {
+                    dashboardHeader
+                    VStack(alignment: .leading, spacing: 10) {
+                        categoryFilters
+                        if activeCategories.contains("ott") || !activeServices.isEmpty {
+                            serviceChips
                         }
-                        Spacer()
-                        Button { showingAccount = true } label: {
-                            Image(systemName: account.user == nil ? "person.crop.circle" : "person.crop.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(lime)
-                                .frame(width: 47, height: 47)
-                                .background(panel, in: Circle())
-                        }
-                        .accessibilityLabel("계정 및 동기화 설정")
                     }
-                    HStack(spacing: 12) {
-                        Text("DISCOVER")
-                            .font(.system(size: 11, weight: .black, design: .rounded))
-                            .tracking(2.5)
-                            .foregroundStyle(lime)
-                        Rectangle().fill(.white.opacity(0.16)).frame(height: 1)
-                    }
-                    categoryStories
-                    serviceChips
-                    if !activeServices.isEmpty {
-                        Button("OTT 필터 초기화") { storedServices = "" }
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(lime)
-                            .accessibilityHint("선택한 OTT 제공처 필터를 모두 해제합니다")
-                    }
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(monthKey.replacingOccurrences(of: "-", with: "."))
-                                .font(.system(size: 30, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
-                            Text("\(filters?.country ?? "지역 확인 중") · \(filters?.timeZone ?? "시간대 확인 중")")
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.52))
-                        }
-                        Spacer()
-                        Button { moveMonth(-1) } label: { Image(systemName: "chevron.left") }
-                            .accessibilityLabel("이전 달")
-                        Button { moveMonth(1) } label: { Image(systemName: "chevron.right") }
-                            .accessibilityLabel("다음 달")
-                        Button("오늘") {
-                            month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
-                            selectedDate = nil
-                        }
-                        .font(.caption.bold())
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white)
                     calendarContent
-                    HStack {
-                        Label("캘린더", systemImage: "calendar")
-                            .foregroundStyle(lime)
-                        Spacer()
-                        Button { showingFilters = true } label: {
-                            Label("상세 필터", systemImage: "slider.horizontal.3")
-                        }
-                        .disabled(catalogOptions == nil)
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(17)
-                    .background(panel, in: RoundedRectangle(cornerRadius: 20))
                 }
+                .frame(maxWidth: 600)
                 .padding(.horizontal, 18)
-                .padding(.top, 18)
-                .padding(.bottom, 42)
+                .padding(.top, 8)
+                .padding(.bottom, 36)
+                .frame(maxWidth: .infinity)
             }
-            .background(ink.ignoresSafeArea())
+            .background {
+                ink.overlay(alignment: .topTrailing) {
+                    RadialGradient(
+                        colors: [Color(red: 0.21, green: 0.17, blue: 0.38), ink],
+                        center: .topTrailing, startRadius: 0, endRadius: 370
+                    )
+                }
+                .ignoresSafeArea()
+            }
+            .foregroundStyle(DiscoveryPalette.text)
+            .tint(lime)
             .toolbar(.hidden, for: .navigationBar)
             .preferredColorScheme(.dark)
             .sheet(item: $selection) { selected in
@@ -193,27 +164,68 @@ struct ContentView: View {
         }
     }
 
-    private var categoryStories: some View {
-        HStack(spacing: 0) {
+    private var dashboardHeader: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 9) {
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(ink)
+                    .frame(width: 32, height: 32)
+                    .background(lime, in: RoundedRectangle(cornerRadius: 10))
+                    .accessibilityHidden(true)
+                Text("고디어")
+                    .font(.system(.title, design: .rounded, weight: .black))
+                    .accessibilityAddTraits(.isHeader)
+            }
+            Spacer(minLength: 0)
+            Button { showingFilters = true } label: {
+                dashboardIcon("slider.horizontal.3")
+            }
+            .accessibilityLabel("상세 필터")
+            .disabled(catalogOptions == nil)
+            Button { showingAccount = true } label: {
+                dashboardIcon(account.user == nil ? "person.crop.circle" : "person.crop.circle.fill")
+            }
+            .accessibilityLabel("계정 및 동기화 설정")
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func dashboardIcon(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 17, weight: .semibold))
+            .frame(width: 44, height: 44)
+            .background(.white.opacity(0.07), in: Circle())
+            .overlay(Circle().strokeBorder(DiscoveryPalette.line))
+    }
+
+    private var categoryFilters: some View {
+        ViewThatFits(in: .horizontal) {
+            categoryFilterRow
+            ScrollView(.horizontal) { categoryFilterRow }
+                .scrollIndicators(.hidden)
+        }
+    }
+
+    private var categoryFilterRow: some View {
+        HStack(spacing: 6) {
             ForEach(options, id: \.0) { option in
                 let selected = activeCategories.contains(option.0)
+                let accent = DiscoveryPalette.accent(option.0)
                 Button {
                     var next = activeCategories
                     if !next.insert(option.0).inserted { next.remove(option.0) }
                     storedCategories = options.map(\.0).filter { next.contains($0) }.joined(separator: ",")
                 } label: {
-                    VStack(spacing: 9) {
-                        Image(systemName: categorySymbol(option.0))
-                            .font(.system(size: 23, weight: .medium))
-                            .foregroundStyle(selected ? ink : .white)
-                            .frame(width: 64, height: 64)
-                            .background(selected ? lime : panel, in: Circle())
-                            .overlay(Circle().strokeBorder(selected ? lime : .white.opacity(0.16), lineWidth: 2))
-                        Text(option.1)
-                            .font(.caption.weight(selected ? .bold : .medium))
-                            .foregroundStyle(selected ? .white : .white.opacity(0.5))
-                    }
-                    .frame(maxWidth: .infinity)
+                    Label(option.1, systemImage: DiscoveryPalette.symbol(option.0))
+                        .font(.subheadline.weight(.semibold))
+                        .fixedSize()
+                        .foregroundStyle(selected ? accent : DiscoveryPalette.muted)
+                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(selected ? accent.opacity(0.13) : panel, in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(selected ? accent.opacity(0.35) : DiscoveryPalette.line))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(option.1) \(selected ? "선택됨" : "선택 안 됨")")
@@ -222,19 +234,20 @@ struct ContentView: View {
         }
     }
 
-    private func categorySymbol(_ category: String) -> String {
-        switch category {
-        case "movie": "film.stack"
-        case "ott": "play.rectangle.on.rectangle"
-        case "game": "gamecontroller"
-        case "epl": "soccerball"
-        default: "sparkles"
-        }
-    }
-
     private var serviceChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 9) {
+            HStack(spacing: 7) {
+                if !activeServices.isEmpty {
+                    Button { storedServices = "" } label: {
+                        Image(systemName: "xmark")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(lime)
+                            .frame(width: 44, height: 44)
+                            .background(lime.opacity(0.1), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("OTT 필터 초기화")
+                }
                 ForEach(["netflix", "disney_plus", "tving", "coupang_play"], id: \.self) { service in
                     let active = activeServices.contains(service)
                     Button {
@@ -243,15 +256,17 @@ struct ContentView: View {
                         storedServices = next.sorted().joined(separator: ",")
                     } label: {
                         HStack(spacing: 7) {
-                            PlatformIcon(key: service, size: 22)
+                            PlatformIcon(key: service, size: 17)
                             Text(ottName(service))
                                 .font(.caption.weight(.semibold))
                         }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 12)
-                        .frame(height: 39)
-                        .background(active ? Color.white.opacity(0.2) : panel, in: Capsule())
-                        .overlay(Capsule().strokeBorder(active ? lime : .white.opacity(0.1), lineWidth: 1))
+                        .foregroundStyle(active ? DiscoveryPalette.text : DiscoveryPalette.muted)
+                        .padding(.horizontal, 10)
+                        .frame(minHeight: 34)
+                        .background(active ? DiscoveryPalette.accent("ott").opacity(0.14) : Color.clear, in: Capsule())
+                        .overlay(Capsule().strokeBorder(active ? DiscoveryPalette.accent("ott").opacity(0.55) : DiscoveryPalette.line))
+                        .padding(.vertical, 5)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(ottName(service)) \(active ? "필터 선택됨" : "필터 미선택")")
@@ -356,11 +371,6 @@ struct ContentView: View {
                 Button("다시 시도") { Task { await loadOptions() } }
             }
             if categories.isEmpty { Text("선택한 분야가 없어요. 분야를 하나 이상 선택해 주세요.").font(.caption).foregroundStyle(.secondary) }
-            if loading && calendar == nil {
-                ProgressView("달력 불러오는 중")
-                    .frame(maxWidth: .infinity, minHeight: 170)
-                    .background(panel, in: RoundedRectangle(cornerRadius: 24))
-            }
             if let errorText {
                 ContentUnavailableView("연결 실패", systemImage: "wifi.exclamationmark", description: Text(errorText))
                 Button("다시 시도") { Task { await loadMonth(selection: selectionKey) } }
@@ -369,7 +379,7 @@ struct ContentView: View {
                 Label("이전에 조회한 달력을 표시해요. 최신 일정이 아닐 수 있어요.", systemImage: "clock.arrow.circlepath")
                     .font(.caption).foregroundStyle(.orange)
             }
-            if calendar != nil { monthGrid }
+            calendarPanel
             if let calendar {
                 if calendar.freshness.contains(where: { $0.dataOrigin == "fixture" }) {
                     Label("가상 일정이 포함되어 있어요", systemImage: "exclamationmark.circle")
@@ -379,12 +389,16 @@ struct ContentView: View {
                     Text("제공처 일정이 일부만 수집되었을 수 있어요.").font(.caption).foregroundStyle(.secondary)
                 }
             }
-            if let selectedDate { dayList(selectedDate) } else if calendar != nil {
-                Label("날짜를 선택하면 공개 예정 콘텐츠를 볼 수 있어요", systemImage: "hand.tap")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.54))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 16)
+            if calendar?.month == monthKey {
+                if let selectedDate {
+                    dayList(selectedDate)
+                } else {
+                    Label("날짜를 선택해 일정을 확인하세요", systemImage: "hand.tap")
+                        .font(.subheadline)
+                        .foregroundStyle(DiscoveryPalette.muted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                }
             }
         }
     }
@@ -448,70 +462,176 @@ struct ContentView: View {
         catch { if !Task.isCancelled { optionsError = error.localizedDescription } }
     }
 
+    private var todaySelection: (date: String, month: Date) {
+        var displayCalendar = CalendarDay.iso
+        if let timeZone = TimeZone(identifier: filters?.timeZone ?? storedTimeZone) {
+            displayCalendar.timeZone = timeZone
+        }
+        let parts = displayCalendar.dateComponents([.year, .month, .day], from: .now)
+        let date = String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
+        let monthStart = CalendarDay.iso.date(from: DateComponents(year: parts.year, month: parts.month))!
+        return (date, monthStart)
+    }
+
+    private var calendarPanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center) {
+                    monthHeading
+                    Spacer(minLength: 8)
+                    monthControls
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    monthHeading
+                    monthControls
+                }
+            }
+            .padding(.horizontal, 14)
+            if let filters {
+                Label("\(filters.country) · \(filters.timeZone)", systemImage: "globe.asia.australia")
+                    .font(.caption2)
+                    .foregroundStyle(DiscoveryPalette.muted)
+                    .padding(.horizontal, 14)
+            }
+            Divider().overlay(DiscoveryPalette.line).padding(.horizontal, 9)
+            if loading && calendar == nil {
+                ProgressView("달력 불러오는 중")
+                    .frame(maxWidth: .infinity, minHeight: 185)
+            } else if calendar?.month == monthKey {
+                monthGrid
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 14)
+        .background {
+            RoundedRectangle(cornerRadius: 25)
+                .fill(LinearGradient(
+                    colors: [Color(red: 0.139, green: 0.132, blue: 0.220), panel],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
+        }
+        .overlay(RoundedRectangle(cornerRadius: 25).strokeBorder(DiscoveryPalette.line))
+    }
+
+    private var monthHeading: some View {
+        let parts = CalendarDay.iso.dateComponents([.year, .month], from: month)
+        return VStack(alignment: .leading, spacing: 1) {
+            Text(verbatim: "\(parts.year!)")
+                .font(.caption.monospacedDigit().weight(.semibold))
+                .foregroundStyle(DiscoveryPalette.muted)
+            Text("\(parts.month!)월")
+                .font(.system(.largeTitle, design: .rounded, weight: .heavy))
+                .tracking(-1)
+        }
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private var monthControls: some View {
+        HStack(spacing: 2) {
+            Button("오늘") {
+                let today = todaySelection
+                month = today.month
+                selectDay(today.date)
+            }
+            .font(.caption.weight(.bold))
+            .fixedSize()
+            .padding(.horizontal, 12)
+            .frame(minHeight: 44)
+            .foregroundStyle(lime)
+            .background(lime.opacity(0.1), in: Capsule())
+            Button { moveMonth(-1) } label: { monthArrow("chevron.left") }
+                .accessibilityLabel("이전 달")
+            Button { moveMonth(1) } label: { monthArrow("chevron.right") }
+                .accessibilityLabel("다음 달")
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func monthArrow(_ image: String) -> some View {
+        Image(systemName: image)
+            .font(.subheadline.weight(.semibold))
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+    }
+
     private var monthGrid: some View {
         let offset = CalendarDay.iso.component(.weekday, from: month) - 1
         let count = CalendarDay.iso.range(of: .day, in: .month, for: month)!.count
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
-        return VStack(spacing: 11) {
-            HStack {
-                ForEach(["일", "월", "화", "수", "목", "금", "토"], id: \.self) { label in
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 1), count: 7)
+        let today = todaySelection.date
+        return VStack(spacing: 5) {
+            LazyVGrid(columns: columns, spacing: 3) {
+                ForEach(Array(["일", "월", "화", "수", "목", "금", "토"].enumerated()), id: \.offset) { index, label in
                     Text(label)
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.44))
+                        .foregroundStyle(index == 0 ? DiscoveryPalette.accent("movie") : DiscoveryPalette.muted)
                         .frame(maxWidth: .infinity)
                 }
-            }
-            LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(0..<(offset + count), id: \.self) { index in
-                    if index < offset { Color.clear.frame(height: 57) }
-                    else {
+                    if index < offset {
+                        Color.clear.frame(height: 44).accessibilityHidden(true)
+                    } else {
                         let number = index - offset + 1
                         let date = String(format: "%@-%02d", monthKey, number)
-                        let day = days[date]
+                        let total = days[date]?.total ?? 0
                         let selected = selectedDate == date
-                        Button {
-                            selectedDate = date
-                            events = days[date]?.previews ?? []
-                            dayError = nil
-                            loadingDay = true
-                        } label: {
-                            VStack(spacing: 5) {
-                                Text("\(number)")
-                                    .font(.system(size: 15, weight: selected ? .black : .medium, design: .rounded))
-                                    .foregroundStyle(selected ? ink : .white)
-                                    .frame(width: 37, height: 37)
-                                    .background(selected ? lime : .clear, in: Circle())
-                                if let total = day?.total, total > 0 {
-                                    Text(total > 99 ? "99+" : "\(total)")
-                                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                                        .foregroundStyle(selected ? lime : .white.opacity(0.76))
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.7)
-                                } else {
-                                    Circle().fill(.clear).frame(width: 5, height: 12)
-                                }
+                        Button { selectDay(date) } label: {
+                            VStack(spacing: 1) {
+                                Text(verbatim: "\(number)")
+                                    .font(.system(.subheadline, design: .rounded, weight: .bold).monospacedDigit())
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.65)
+                                Text(total > 99 ? "99+" : "\(total)")
+                                    .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.65)
+                                    .foregroundStyle(selected ? ink.opacity(0.72) : DiscoveryPalette.muted)
+                                    .opacity(total > 0 ? 1 : 0)
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 57)
+                            .padding(.vertical, 3)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .foregroundStyle(selected ? ink : DiscoveryPalette.text)
+                            .background(selected ? lime : (total > 0 ? .white.opacity(0.035) : .clear),
+                                        in: RoundedRectangle(cornerRadius: 10))
+                            .overlay(RoundedRectangle(cornerRadius: 10)
+                                .strokeBorder(date == today && !selected ? lime : .clear))
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("\(date), \(day?.total ?? 0)개 일정")
+                        .accessibilityLabel("\(date), \(total)개 일정\(date == today ? ", 오늘" : "")")
                         .accessibilityAddTraits(selected ? [.isSelected] : [])
                     }
                 }
             }
         }
-        .padding(.vertical, 18)
-        .padding(.horizontal, 8)
-        .background(panel, in: RoundedRectangle(cornerRadius: 24))
+    }
+
+    private func selectDay(_ date: String) {
+        shouldSelectToday = false
+        guard date != selectedDate else { return }
+        selectedDate = date
+        events = days[date]?.previews ?? []
+        dayError = nil
+        loadingDay = true
     }
 
     private func dayList(_ date: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("UP NEXT  ·  \(date)  ·  \(days[date]?.total ?? 0)건")
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
-                .tracking(1.2)
-                .foregroundStyle(lime)
+        LazyVStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(dateLabel(date))
+                    .font(.system(.title2, design: .rounded, weight: .heavy))
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 4)
+                Text("\(days[date]?.total ?? 0)개 일정")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(lime)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(lime.opacity(0.12), in: Capsule())
+            }
+            .padding(.top, 5)
             if loadingDay {
                 HStack(spacing: 8) {
                     ProgressView().tint(lime)
@@ -536,10 +656,12 @@ struct ContentView: View {
                         if let filters { selection = DetailSelection(event: item, filters: filters) }
                     } label: {
                         HStack(alignment: .top, spacing: 12) {
-                            EventPosterThumbnail(contentId: item.contentId, api: api)
+                            EventPosterThumbnail(contentId: item.contentId, kind: item.kind, api: api)
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
-                                    Text(item.categoryTitle).font(.caption.bold())
+                                    Text(item.categoryTitle)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(DiscoveryPalette.accent(item.kind))
                                     if item.dataOrigin == "fixture" {
                                         Text("가상").font(.caption).foregroundStyle(.orange)
                                     }
@@ -582,8 +704,8 @@ struct ContentView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(panel, in: RoundedRectangle(cornerRadius: 18))
-                        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(.white.opacity(0.07)))
+                        .background(panel, in: RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(DiscoveryPalette.line))
                         .accessibilityElement(children: .combine)
                     }
                     .buttonStyle(.plain)
@@ -609,19 +731,16 @@ struct ContentView: View {
         }
     }
 
-    private func ottMark(_ service: String) -> String {
-        switch service {
-        case "netflix": "N"
-        case "disney_plus": "Disney+"
-        case "tving": "TVING"
-        case "coupang_play": "Coupang Play"
-        default: service
-        }
+    private func dateLabel(_ date: String) -> String {
+        let parts = date.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return date }
+        return "\(parts[1])월 \(parts[2])일"
     }
 
     private func moveMonth(_ offset: Int) {
         guard let next = CalendarDay.iso.date(byAdding: .month, value: offset, to: month),
               next >= CalendarDay.iso.date(from: DateComponents(year: 2026, month: 1, day: 1))! else { return }
+        shouldSelectToday = false
         month = next
         selectedDate = nil
     }
@@ -634,6 +753,14 @@ struct ContentView: View {
             showingCachedCalendar = false
             loading = false
             return
+        }
+        if shouldSelectToday {
+            let today = todaySelection
+            if month != today.month {
+                month = today.month
+                return
+            }
+            selectDay(today.date)
         }
         calendar = lastCalendars[selection]
         showingCachedCalendar = calendar != nil
@@ -657,7 +784,7 @@ struct ContentView: View {
 
     @MainActor private func loadDay(_ date: String, selection: String) async {
         guard let filters, !filters.categories.isEmpty else { events = []; return }
-        guard let revision = calendar?.catalogRevision else { return }
+        guard calendar?.month == monthKey, let revision = calendar?.catalogRevision else { return }
         let requestID = UUID()
         dayRequestID = requestID
         let cacheKey = [selection, revision, date].joined(separator: "|")
@@ -725,7 +852,6 @@ private struct EventDetailView: View {
     let filters: PublicFilters
     let api: PublicAPI
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var detail: ReleaseDetail?
     @State private var detailFailed = false
     @State private var retryCount = 0
@@ -734,17 +860,18 @@ private struct EventDetailView: View {
     @State private var contentFailed = false
 
     private var displayedEvent: ReleaseEvent { detail?.event ?? event }
+    private var accent: Color { DiscoveryPalette.accent(displayedEvent.kind) }
     private var statusColor: Color {
         switch displayedEvent.status {
         case "cancelled": .red
         case "postponed": .orange
-        default: DiscoveryPalette.lime
+        default: accent
         }
     }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 hero
                 if detailFailed {
                     detailSection("상세 정보", icon: "exclamationmark.circle") {
@@ -768,11 +895,13 @@ private struct EventDetailView: View {
             }
             .frame(maxWidth: 560)
             .padding(.horizontal, 18)
-            .padding(.vertical, 14)
+            .padding(.top, 8)
+            .padding(.bottom, 28)
             .frame(maxWidth: .infinity)
         }
         .background(DiscoveryPalette.ink.ignoresSafeArea())
-        .tint(DiscoveryPalette.lime)
+        .foregroundStyle(DiscoveryPalette.text)
+        .tint(accent)
         .navigationTitle("일정 상세")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(DiscoveryPalette.ink, for: .navigationBar)
@@ -805,52 +934,95 @@ private struct EventDetailView: View {
     }
 
     private var hero: some View {
-        let layout = typeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
-            : AnyLayout(HStackLayout(alignment: .center, spacing: 16))
+        VStack(alignment: .leading, spacing: 13) {
+            posterStage
 
-        return layout {
+            Label(displayedEvent.categoryTitle, systemImage: DiscoveryPalette.symbol(displayedEvent.kind))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(accent)
+                .padding(.top, 4)
+            Text(displayedEvent.title)
+                .font(.system(.largeTitle, design: .rounded, weight: .heavy))
+                .tracking(-0.6)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            if displayedEvent.dataOrigin == "fixture" {
+                Text("가상 데이터")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+            }
+            releaseStrip
+        }
+    }
+
+    private var posterStage: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 22)
+                .fill(LinearGradient(
+                    colors: [accent.opacity(0.33), DiscoveryPalette.panel, accent.opacity(0.24)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
+            GeometryReader { space in
+                ForEach(0..<5) { index in
+                    RoundedRectangle(cornerRadius: 44)
+                        .strokeBorder(accent.opacity(0.16), lineWidth: 1)
+                        .frame(width: space.size.width + CGFloat(index) * 35,
+                               height: 140 + CGFloat(index) * 30)
+                        .rotationEffect(.degrees(-32))
+                        .position(x: space.size.width * 0.5, y: space.size.height * 0.51)
+                }
+            }
+            .accessibilityHidden(true)
+
             PosterArtwork(
                 urlString: content?.posterUrl,
                 isLoading: isContentLoading,
                 lookupFailed: contentFailed,
-                imageLabel: "\(displayedEvent.title) 포스터"
+                imageLabel: "\(displayedEvent.title) 포스터",
+                symbol: DiscoveryPalette.symbol(displayedEvent.kind),
+                accent: accent
             )
-            .frame(width: 112, height: 168)
-            VStack(alignment: .leading, spacing: 10) {
-                Text(displayedEvent.categoryTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(DiscoveryPalette.lime)
-                Text(displayedEvent.title)
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .accessibilityAddTraits(.isHeader)
-                Text(displayedEvent.statusTitle)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(statusColor)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(statusColor.opacity(0.14), in: Capsule())
-                if displayedEvent.dataOrigin == "fixture" {
-                    Text("가상 데이터")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.orange)
-                }
-                Label(displayedEvent.time.description, systemImage: "calendar")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.76))
+            .frame(width: 137, height: 205)
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.19)))
+            .shadow(color: .black.opacity(0.5), radius: 12, y: 9)
+            .padding(.vertical, 17)
+        }
+        .frame(height: 239)
+        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(accent.opacity(0.27)))
+    }
+
+    private var releaseStrip: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                releaseDate.fixedSize()
+                Spacer(minLength: 0)
+                statusPill.fixedSize()
             }
-            .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 8) {
+                releaseDate
+                statusPill
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background {
-            RoundedRectangle(cornerRadius: 22)
-                .fill(LinearGradient(
-                    colors: [DiscoveryPalette.lime.opacity(0.16), DiscoveryPalette.panel],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ))
-        }
-        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(.white.opacity(0.09)))
+        .padding(12)
+        .background(accent.opacity(0.085), in: RoundedRectangle(cornerRadius: 15))
+        .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(accent.opacity(0.23)))
+    }
+
+    private var releaseDate: some View {
+        Label(displayedEvent.time.description, systemImage: "calendar")
+            .font(.subheadline.weight(.semibold))
+    }
+
+    private var statusPill: some View {
+        Text(displayedEvent.statusTitle)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(statusColor)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(statusColor.opacity(0.13), in: Capsule())
     }
 
     private var schedule: some View {
@@ -901,15 +1073,23 @@ private struct EventDetailView: View {
                        ["http", "https"].contains(scheme), let host = url.host, !host.isEmpty {
                         Link(destination: url) {
                             HStack(spacing: 8) {
-                                Text(source.providerKey)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(sourceTitle(source.providerKey))
+                                        .font(.subheadline.weight(.semibold))
+                                    Text(host)
+                                        .font(.caption)
+                                        .foregroundStyle(DiscoveryPalette.muted)
+                                }
                                 Spacer(minLength: 12)
-                                Image(systemName: "arrow.up.right").accessibilityHidden(true)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.subheadline.weight(.semibold))
+                                    .accessibilityHidden(true)
                             }
                             .frame(minHeight: 44)
                             .contentShape(Rectangle())
                         }
                     } else {
-                        Text(source.providerKey)
+                        Text(sourceTitle(source.providerKey))
                     }
                 }
             }
@@ -921,18 +1101,35 @@ private struct EventDetailView: View {
         }
     }
 
+    private func sourceTitle(_ key: String) -> String {
+        switch key {
+        case "kobis": "영화관입장권통합전산망"
+        case "ott_reviewed": "검토된 OTT 일정 출처"
+        case "ott_fallback": "OTT 참고 일정 출처"
+        case "igdb": "IGDB"
+        default: key
+        }
+    }
+
     private func detailSection<Content: View>(
         _ title: String, icon: String, @ViewBuilder content: () -> Content
     ) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label(title, systemImage: icon)
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
+            Label {
+                Text(title).font(.headline)
+            } icon: {
+                Image(systemName: icon)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(accent)
+            }
+            .accessibilityAddTraits(.isHeader)
+            Divider().overlay(DiscoveryPalette.line).accessibilityHidden(true)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(DiscoveryPalette.panel, in: RoundedRectangle(cornerRadius: 20))
+        .background(DiscoveryPalette.panel, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(DiscoveryPalette.line))
     }
 
     private func detailRow(_ label: String, value: String) -> some View {
@@ -955,13 +1152,20 @@ private struct EventDetailView: View {
 
 private struct EventPosterThumbnail: View {
     let contentId: String?
+    let kind: String
     let api: PublicAPI
     @State private var posterURL: String?
     @State private var isLoading = false
 
     var body: some View {
-        PosterArtwork(urlString: posterURL, isLoading: isLoading, compact: true)
-            .frame(width: 70, height: 98)
+        PosterArtwork(
+            urlString: posterURL,
+            isLoading: isLoading,
+            compact: true,
+            symbol: DiscoveryPalette.symbol(kind),
+            accent: DiscoveryPalette.accent(kind)
+        )
+        .frame(width: 62, height: 88)
             .task(id: contentId) {
                 posterURL = nil
                 guard let contentId else { isLoading = false; return }
@@ -980,6 +1184,8 @@ private struct PosterArtwork: View {
     var compact = false
     var lookupFailed = false
     var imageLabel = ""
+    var symbol = "photo"
+    var accent = DiscoveryPalette.lime
 
     private var posterURL: URL? {
         guard let urlString, let url = URL(string: urlString),
@@ -1016,15 +1222,21 @@ private struct PosterArtwork: View {
             .frame(width: proxy.size.width, height: proxy.size.height)
             .clipped()
         }
-        .background(.white.opacity(0.06))
+        .background {
+            LinearGradient(
+                colors: [accent.opacity(0.16), DiscoveryPalette.ink],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+        }
         .clipShape(RoundedRectangle(cornerRadius: compact ? 8 : 12))
         .accessibilityHidden(compact)
     }
 
     private func placeholder(_ message: String) -> some View {
         VStack(spacing: 4) {
-            Image(systemName: "photo")
-                .font(compact ? .title3 : .title)
+            Image(systemName: symbol)
+                .font(compact ? .title3 : .largeTitle)
+                .foregroundStyle(accent)
                 .accessibilityHidden(true)
             if !compact {
                 Text(message)
