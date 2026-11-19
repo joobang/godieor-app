@@ -1,8 +1,18 @@
+## UI-05 · 일정 상세 포스터 겹침 수정 (2026-11-19)
+
+- iPhone 17 Simulator에서 세로 포스터가 제목·일정에 겹침을 재현했다. 상세 요약과 공개 정보/소개/출처를 나누고 포스터/이미지 실패 영역을 고정했다. 원본 app `docs/ai/tasks/UI-05-event-detail.md`.
+- 포스터 유무 두 사례와 닫기 확인, 계정 회귀 15/15, 개발 서명 빌드 2 성공. 독립 iOS 빌드 PASS, runner 전체 ERROR. 공통 revision SYNC-2026-11-19-UI-05.
+
 ## UI-04 · 앱 디스커버리 화면 마무리 (2026-11-19)
 
 - app origin/main `323f6f0` 기반 분리 작업 `codex/ui-polish-complete-20261119`. UI-03의 미리보기·날짜 캐시 통합과 캘린더 건수/상태/필터·카드·상세 UI 개선. 원본 `docs/ai/tasks/UI-04-polish-complete.md`.
 - `xcodebuild` unsigned 시뮬레이터 BUILD SUCCEEDED, `sh scripts/check-account-flow.sh` 15/15, `git diff --check` 성공. CoreSimulatorService 연결 장애로 실제 앱 실행 확인 대기. 독립 검증 및 승인 미실행.
 - backend/API 계약·migration, verifier acceptance/verdict 변경 없음. 사용자 checkout의 개인 pbxproj 및 HTML 수정 보존. ADR/LEARN 신규 해당 없음. 최종 원격 병합 SHA는 GitHub 조회 기준으로 확인.
+
+## UI-03 · 날짜별 조회 캐시·게임 기본 노출 (2026-11-19)
+
+- 원본 `docs/ai/tasks/UI-03-day-fetch-performance.md`. 달력 미리보기 즉시 표시·동일 카탈로그 버전 날짜 조회 캐시·신규/로그아웃 기본 게임 카테고리 활성화. 기존 저장 필터 유지.
+- 2026-11-19 운영 API 게임 11월 370건, GTA6 출시일 11/19 게임 0건 확인. 원격 게임 게시 복구는 별도 backend 후속. 자체 unsigned iOS Simulator 빌드 성공, 실제 화면 및 독립 검증 미확인.
 
 ## APP-UI-01 · 월간 달력 가독성·상단 공간 개선 (2026-11-18)
 
@@ -14,6 +24,39 @@
 
 - 앱 `dev` 기반 `codex/ios-render-api-20261118`에서 Debug/Release API 주소를 `https://godieor-backend.onrender.com/v1`로 교체. 실제 Render health(DB 연결)/options/calendar/events HTTP 200, 11월 일정 첫 페이지100개·후속 커서 확인. iOS Debug/Release unsigned 빌드 성공 및 생성 plist 주소 확인.
 - 원본 `docs/ai/tasks/APP-DEPLOY-01.md`. API 계약·migration·verifier acceptance/verdict 변경 없음. 앱 재설치와 실제 iPhone·Google 로그인 확인, GitHub Actions 자연 예약 실행 확인은 후속. 원격 배포 SHA 미검증. 담당 해제.
+
+## CI-04 · backend dev 브랜치 동기화와 필수 PR 검사 (2026-11-18)
+
+- GitHub backend `main`과 기본 브랜치 `dev`를 `d0d3648`로 동기화했다. PR #2 검사 44246996316, 동기화 뒤 main 44247177428 및 dev 44247209137의 Backend CI가 통과했다.
+- 새 변경은 최신 `dev`에서 `codex/` 작업 브랜치로 분기하고 `dev`로 PR을 연다. 양쪽 대상 브랜치 모두 PR·GitHub Actions `test`·최신 base 필수 및 관리자 우회 금지. `dev` 규칙 86509995, `main` 규칙 86508537. 릴리스는 별도 `dev → main` PR로 진행한다.
+- dev 대상 문서 PR #3 head `42276fc`에서 검사 44247574020이 필수로 표시되고, 실행 중 병합 비활성, 성공 후 병합 활성 상태를 확인했다. 브랜치 동기화 상태를 유지하도록 이 문서 PR은 열어 두었다.
+- 예약 수집은 `COLLECTION_SCHEDULE_ACTIVE=true`일 때 활성화된다. 운영 백필과 독립 검증 재실행·승인은 이번 작업에서 수행하지 않았다. backend `docs/tasks/CI-04-dev-sync.md`, LEARN-0015, 담당 해제. revision SYNC-2026-11-18-CI-04.
+
+## CI-03 · B안 backend main 적용 확인 (2026-11-18)
+
+- PR #1의 고정 head 06464d1을 merge commit 9f218b9로 병합. backend main의 PR 필수 GitHub Actions test 규칙 유지. 병합 SHA Backend CI 44245768636에서 build/test·일회용 PostgreSQL migration/HTTP API·Job summary 성공 확인.
+- 검증 양식은 main에 있으며 GitHub 기본 브랜치 dev의 자동 입력까지 적용한 것은 아니다. 기본 브랜치와 수집 일정은 별도 운영 범위다. 앱 계약 참조 및 verifier의 PR 증거 첨부 명령은 로컬 main에 반영.
+- 독립 증거는 PR head에 연결된 ERROR를 그대로 보존한다. 이 단계는 B안 검증 경로의 적용이며 독립 제품 승인이나 실제 데이터 적재를 뜻하지 않는다. 원본 `docs/tasks/CI-03-pr-evidence.md`, 담당 해제. revision SYNC-2026-11-18-CI-03-MERGED.
+
+## CI-03 · PR DB·API 및 독립 증거 연결 (2026-11-18)
+
+- backend PR #1 head 06464d1, 원격 Backend CI 44244618154에서 360/360, 일회용 PostgreSQL migration·데이터·HTTP API와 Job summary 성공. 양식과 검사 변경은 PR에서 검증한 뒤 main에 병합했다.
+- 앱 계약 지문 원본과 동기화 후 PR head의 독립 verifier를 실행하고 요약을 PR에 첨부. iOS 빌드·이벤트 ID 성공, 시간 API HTTP400·비밀 검사 실패, 4개 기준 SKIPPED, 최종 ERROR. 원본 backend `docs/tasks/CI-03-pr-evidence.md`, LEARN-0015. 정책 승인 및 운영 적재 없음. revision SYNC-2026-11-18-CI-03, 담당 해제.
+
+## CI-02 · backend main PR 필수 검사 적용 (2026-11-18)
+
+- 원본 backend `docs/tasks/CI-02-backend-pr-gate.md`. 기존 Actions run44239623270 성공과 Checks API의 `test` / GitHub Actions(15368) 확인. main 범위 PR 필수·최신 base·별도 승인 0·관리자 우회 금지 규칙을 GitHub에 적용하고 저장된 설정을 읽어 확인했다.
+- 사용자 재인증 후 main 보호 규칙 86508537 저장 확인. PR 검증 양식은 대상 브랜치 main의 리뷰 PR에서 실제 검사 결과를 확인한 뒤 병합한다. 제품 코드·계약·운영 데이터·독립 기준 불변. 공통 revision SYNC-2026-11-18-CI-02-ACTIVE.
+
+## DATA-87 · GitHub Actions 백필 대상 선택 (2026-11-18)
+
+- 원본 backend `docs/tasks/DATA-87-selective-backfill.md`. 전체/KOBIS/EPL/IGDB 전체 또는 시장별/OTT를 선택하며 기존 일일과 전체 백필 유지. 다른 대상의 초기 등록·수집·게시는 실행하지 않음. Node24 360/360, 모의 셸 라우팅과 실패 전파, 일회용 DB 실제 CLI에서 IGDB WORLD 단독 등록·실행 확인.
+- 사용자 요청 범위에서 GitHub 적용. 실제 WORLD 백필 또는 P2028 복구 완료와 구분. B안 후속은 원격 Backend CI 확인 후 필수 PR 검사. 관련 LEARN-0022, 담당 해제, revision SYNC-2026-11-18-DATA-87.
+
+## CI-01 · 백엔드 clean checkout 검사 복구 (2026-11-18)
+
+- 원본 backend `docs/tasks/CI-01-reproducible-backend-ci.md`. CI에는 Prisma 생성용 합성 URL을 주입하고 OTT 기본 검사는 추적된 검토 입력과 가상 발견 입력으로 실행. .env/work 없는 별도 작업 트리 Node24 npm ci --offline 및 npm test 357/357 성공. 원격 필수 체크·통합 runner는 후속. 관련 LEARN-0022 재검토.
+- 실제 Actions 44221212098에서 KOBIS/EPL/IGDB 6개 시장 성공. OTT 기존 검토 게시 완료 및 발견 누락 경고. IGDB WORLD publish P2028만 백필 실패를 유발. 순차 DB 왕복과 15분 게시 한도가 유력하나 WORLD 단독 소요 시간은 미관측. 제품 수집 로직·계약·승인 상태 변경 없음. 다음 작업은 WORLD 지연 계측·임시 DB 재현. 담당 해제, revision SYNC-2026-11-18-CI-01.
 
 ## DATA-86 · 초기등록·수집기록 트랜잭션 보완 (2026-11-18)
 

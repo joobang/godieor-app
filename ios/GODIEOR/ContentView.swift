@@ -1,6 +1,16 @@
 import SwiftUI
 
+private enum DiscoveryPalette {
+    static let ink = Color(red: 0.067, green: 0.078, blue: 0.067)
+    static let lime = Color(red: 0.86, green: 0.99, blue: 0.42)
+    static let panel = Color(red: 0.12, green: 0.14, blue: 0.12)
+}
+
 struct ContentView: View {
+    private let ink = DiscoveryPalette.ink
+    private let lime = DiscoveryPalette.lime
+    private let panel = DiscoveryPalette.panel
+
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var account = AccountState()
     @State private var month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
@@ -26,7 +36,12 @@ struct ContentView: View {
     @State private var selectedDayHasPreview = false
     @State private var errorText: String?
     @State private var dayError: String?
-    @State private var selectedEvent: ReleaseEvent?
+    @State private var selection: DetailSelection?
+    private struct DetailSelection: Identifiable {
+        let event: ReleaseEvent
+        let filters: PublicFilters
+        var id: String { event.id }
+    }
     private let api = PublicAPI()
     private let options = [("movie", "영화"), ("ott", "OTT"), ("game", "게임"), ("epl", "EPL")]
 
@@ -56,10 +71,6 @@ struct ContentView: View {
         [selectedDate ?? "", selectionKey, calendar?.catalogRevision ?? ""].joined(separator: ":")
     }
     private var days: [String: ReleaseDay] { Dictionary(uniqueKeysWithValues: (calendar?.days ?? []).map { ($0.date, $0) }) }
-
-    private let ink = Color(red: 0.067, green: 0.078, blue: 0.067)
-    private let lime = Color(red: 0.86, green: 0.99, blue: 0.42)
-    private let panel = Color(red: 0.12, green: 0.14, blue: 0.12)
 
     var body: some View {
         NavigationStack {
@@ -144,8 +155,10 @@ struct ContentView: View {
             .background(ink.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
             .preferredColorScheme(.dark)
-            .sheet(item: $selectedEvent) { event in
-                if let filters { NavigationStack { EventDetailView(event: event, filters: filters, api: api) } }
+            .sheet(item: $selection) { selected in
+                NavigationStack {
+                    EventDetailView(event: selected.event, filters: selected.filters, api: api)
+                }
             }
             .sheet(isPresented: $showingFilters) { filterSheet }
             .sheet(isPresented: $showingAccount) {
@@ -411,18 +424,6 @@ struct ContentView: View {
         }
     }
 
-    private func gameDeviceLabel(_ device: String) -> String {
-        switch device {
-        case "ios": return "iOS (아이폰·아이패드)"
-        case "android": return "Android"
-        case "pc": return "PC"
-        case "playstation": return "PlayStation"
-        case "xbox": return "Xbox"
-        case "switch": return "Nintendo Switch"
-        default: return device
-        }
-    }
-
     private func storedSetBinding(_ value: String, key: String) -> Binding<Bool> {
         Binding(
             get: { (key == "services" ? activeServices : activeDevices).contains(value) },
@@ -531,7 +532,9 @@ struct ContentView: View {
             }
             ForEach(events) { item in
                 HStack(spacing: 8) {
-                    Button { selectedEvent = item } label: {
+                    Button {
+                        if let filters { selection = DetailSelection(event: item, filters: filters) }
+                    } label: {
                         HStack(alignment: .top, spacing: 12) {
                             EventPosterThumbnail(contentId: item.contentId, api: api)
                             VStack(alignment: .leading, spacing: 4) {
@@ -571,6 +574,11 @@ struct ContentView: View {
                                     .lineLimit(2)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.42))
+                                .padding(.top, 4)
+                                .accessibilityHidden(true)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
@@ -607,16 +615,6 @@ struct ContentView: View {
         case "disney_plus": "Disney+"
         case "tving": "TVING"
         case "coupang_play": "Coupang Play"
-        default: service
-        }
-    }
-
-    private func ottName(_ service: String) -> String {
-        switch service {
-        case "netflix": "넷플릭스"
-        case "disney_plus": "디즈니플러스"
-        case "tving": "티빙"
-        case "coupang_play": "쿠팡플레이"
         default: service
         }
     }
@@ -700,88 +698,259 @@ struct ContentView: View {
     }
 }
 
+private func gameDeviceLabel(_ device: String) -> String {
+    switch device {
+    case "ios": return "iOS (아이폰·아이패드)"
+    case "android": return "Android"
+    case "pc": return "PC"
+    case "playstation": return "PlayStation"
+    case "xbox": return "Xbox"
+    case "switch": return "Nintendo Switch"
+    default: return device
+    }
+}
+
+private func ottName(_ service: String) -> String {
+    switch service {
+    case "netflix": "넷플릭스"
+    case "disney_plus": "디즈니플러스"
+    case "tving": "티빙"
+    case "coupang_play": "쿠팡플레이"
+    default: service
+    }
+}
+
 private struct EventDetailView: View {
     let event: ReleaseEvent
     let filters: PublicFilters
     let api: PublicAPI
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var detail: ReleaseDetail?
-    @State private var error: String?
+    @State private var detailFailed = false
+    @State private var retryCount = 0
     @State private var content: CatalogContent?
     @State private var isContentLoading = false
+    @State private var contentFailed = false
 
     private var displayedEvent: ReleaseEvent { detail?.event ?? event }
+    private var statusColor: Color {
+        switch displayedEvent.status {
+        case "cancelled": .red
+        case "postponed": .orange
+        default: DiscoveryPalette.lime
+        }
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text(displayedEvent.categoryTitle.uppercased())
-                    .font(.caption.bold())
-                    .tracking(2)
-                    .foregroundStyle(Color(red: 0.86, green: 0.99, blue: 0.42))
-                Text(displayedEvent.title)
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .fixedSize(horizontal: false, vertical: true)
-                PosterArtwork(urlString: content?.posterUrl, isLoading: isContentLoading)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 340)
-                    .accessibilityLabel("\(displayedEvent.title) 포스터")
-                if let synopsis = content?.synopsis, !synopsis.isEmpty {
-                    Text("작품 소개").font(.headline)
-                    Text(synopsis).font(.subheadline).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                LabeledContent("분야", value: displayedEvent.categoryTitle)
-                LabeledContent("일정", value: displayedEvent.time.description)
-                LabeledContent("상태", value: displayedEvent.statusTitle)
-                if let market = displayedEvent.releaseMarket { LabeledContent("공개 지역", value: market) }
-                if let country = displayedEvent.venueCountry { LabeledContent("개최국", value: country) }
-                if !displayedEvent.services.isEmpty { LabeledContent("OTT", value: displayedEvent.services.joined(separator: ", ")) }
-                if !displayedEvent.devices.isEmpty { LabeledContent("기기", value: displayedEvent.devices.map { device in
-                    switch device {
-                    case "ios": return "iOS"
-                    case "android": return "Android"
-                    case "pc": return "PC"
-                    case "playstation": return "PlayStation"
-                    case "xbox": return "Xbox"
-                    case "switch": return "Nintendo Switch"
-                    default: return device
-                    }
-                }.joined(separator: ", ")) }
-                LabeledContent("데이터", value: displayedEvent.dataOrigin == "fixture" ? "가상 데이터" : "제공처 반영 데이터")
-                LabeledContent("최종 수정", value: displayedEvent.updatedAt)
-                if let previous = detail?.previousTime { LabeledContent("이전 일정", value: previous.description) }
-                if let detail {
-                    Text("출처").font(.headline)
-                    if detail.sources.isEmpty { Text("표시할 출처 없음").foregroundStyle(.secondary) }
-                    ForEach(detail.sources, id: \.url) { source in
-                        if let url = URL(string: source.url), ["http", "https"].contains(url.scheme) {
-                            Link(source.providerKey, destination: url)
-                        } else { Text(source.providerKey) }
+                hero
+                if detailFailed {
+                    detailSection("상세 정보", icon: "exclamationmark.circle") {
+                        Text("일정의 최신 정보와 출처를 불러오지 못했어요.")
+                            .foregroundStyle(.secondary)
+                        Button("다시 시도") { retryCount += 1 }
+                            .buttonStyle(.bordered)
                     }
                 }
-                if let error { Text(error).font(.caption).foregroundStyle(.red) }
-            }.padding()
+                schedule
+                if let synopsis = content?.synopsis?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !synopsis.isEmpty {
+                    detailSection("작품 소개", icon: "text.alignleft") {
+                        Text(synopsis)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .lineSpacing(4)
+                    }
+                }
+                sources
+            }
+            .frame(maxWidth: 560)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
         }
-        .background(Color(red: 0.067, green: 0.078, blue: 0.067).ignoresSafeArea())
+        .background(DiscoveryPalette.ink.ignoresSafeArea())
+        .tint(DiscoveryPalette.lime)
         .navigationTitle("일정 상세")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(DiscoveryPalette.ink, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("닫기") { dismiss() } } }
-        .task {
-            do { detail = try await api.detail(id: event.id, filters: filters) }
-            catch is CancellationError { return }
-            catch { if !Task.isCancelled { self.error = "상세 조회 실패: \(error.localizedDescription)" } }
+        .task(id: retryCount) {
+            detailFailed = false
+            do {
+                let result = try await api.detail(id: event.id, filters: filters)
+                try Task.checkCancellation()
+                detail = result
+            } catch {
+                if !Task.isCancelled { detailFailed = true }
+            }
         }
         .task(id: displayedEvent.contentId) {
             content = nil
+            contentFailed = false
             guard let id = displayedEvent.contentId else { isContentLoading = false; return }
             isContentLoading = true
-            defer { isContentLoading = false }
-            do { content = try await api.content(id: id) }
-            catch is CancellationError { return }
-            catch { /* 포스터 조회 실패 시 일정 상세는 그대로 표시한다. */ }
+            defer { if !Task.isCancelled { isContentLoading = false } }
+            do {
+                let result = try await api.content(id: id)
+                try Task.checkCancellation()
+                content = result
+            } catch {
+                if !Task.isCancelled { contentFailed = true }
+            }
         }
     }
 
+    private var hero: some View {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 16))
+
+        return layout {
+            PosterArtwork(
+                urlString: content?.posterUrl,
+                isLoading: isContentLoading,
+                lookupFailed: contentFailed,
+                imageLabel: "\(displayedEvent.title) 포스터"
+            )
+            .frame(width: 112, height: 168)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(displayedEvent.categoryTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(DiscoveryPalette.lime)
+                Text(displayedEvent.title)
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .accessibilityAddTraits(.isHeader)
+                Text(displayedEvent.statusTitle)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(statusColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(statusColor.opacity(0.14), in: Capsule())
+                if displayedEvent.dataOrigin == "fixture" {
+                    Text("가상 데이터")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                }
+                Label(displayedEvent.time.description, systemImage: "calendar")
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.76))
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 22)
+                .fill(LinearGradient(
+                    colors: [DiscoveryPalette.lime.opacity(0.16), DiscoveryPalette.panel],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
+        }
+        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(.white.opacity(0.09)))
+    }
+
+    private var schedule: some View {
+        detailSection("공개 정보", icon: "info.circle") {
+            if let market = displayedEvent.releaseMarket {
+                detailRow("공개 지역", value: Locale(identifier: "ko_KR").localizedString(forRegionCode: market) ?? market)
+            }
+            if let country = displayedEvent.venueCountry {
+                detailRow("개최국", value: Locale(identifier: "ko_KR").localizedString(forRegionCode: country) ?? country)
+            }
+            if !displayedEvent.services.isEmpty {
+                detailRow("OTT", value: displayedEvent.services.map(ottName).joined(separator: ", "))
+            }
+            if !displayedEvent.devices.isEmpty {
+                detailRow("기기", value: displayedEvent.devices.map(gameDeviceLabel).joined(separator: ", "))
+            }
+            if let previous = detail?.previousTime {
+                detailRow("이전 일정", value: previous.description)
+            }
+            detailRow("데이터", value: displayedEvent.dataOrigin == "fixture" ? "가상 데이터" : "제공처 반영 데이터")
+            detailRow("최종 수정", value: updatedAtLabel)
+        }
+    }
+
+    private var updatedAtLabel: String {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions.insert(.withFractionalSeconds)
+        let hasFraction = iso.date(from: displayedEvent.updatedAt) != nil
+        if !hasFraction {
+            iso.formatOptions.remove(.withFractionalSeconds)
+        }
+        guard let date = iso.date(from: displayedEvent.updatedAt), let zone = TimeZone(identifier: filters.timeZone) else {
+            return displayedEvent.updatedAt
+        }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.timeZone = zone
+        formatter.setLocalizedDateFormatFromTemplate(hasFraction ? "yMd HmsSSS" : "yMd Hms")
+        return "\(formatter.string(from: date)) · \(zone.abbreviation(for: date) ?? zone.identifier)"
+    }
+
+    @ViewBuilder private var sources: some View {
+        if let detail {
+            detailSection("출처", icon: "link") {
+                if detail.sources.isEmpty { Text("표시할 출처 없음").foregroundStyle(.secondary) }
+                ForEach(Array(detail.sources.enumerated()), id: \.offset) { _, source in
+                    if let url = URL(string: source.url), let scheme = url.scheme?.lowercased(),
+                       ["http", "https"].contains(scheme), let host = url.host, !host.isEmpty {
+                        Link(destination: url) {
+                            HStack(spacing: 8) {
+                                Text(source.providerKey)
+                                Spacer(minLength: 12)
+                                Image(systemName: "arrow.up.right").accessibilityHidden(true)
+                            }
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                        }
+                    } else {
+                        Text(source.providerKey)
+                    }
+                }
+            }
+        } else if !detailFailed {
+            ProgressView("최신 일정과 출처 확인 중")
+                .font(.footnote)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+        }
+    }
+
+    private func detailSection<Content: View>(
+        _ title: String, icon: String, @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(title, systemImage: icon)
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(DiscoveryPalette.panel, in: RoundedRectangle(cornerRadius: 20))
+    }
+
+    private func detailRow(_ label: String, value: String) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                Text(label).foregroundStyle(.secondary).fixedSize()
+                Spacer(minLength: 4)
+                Text(value).fixedSize()
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(label).foregroundStyle(.secondary)
+                Text(value)
+            }
+        }
+        .font(.subheadline)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
 }
 
 private struct EventPosterThumbnail: View {
@@ -809,6 +978,8 @@ private struct PosterArtwork: View {
     let urlString: String?
     var isLoading = false
     var compact = false
+    var lookupFailed = false
+    var imageLabel = ""
 
     private var posterURL: URL? {
         guard let urlString, let url = URL(string: urlString),
@@ -817,37 +988,50 @@ private struct PosterArtwork: View {
     }
 
     var body: some View {
-        Group {
-            if let posterURL {
-                AsyncImage(url: posterURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    case .empty:
-                        ProgressView()
-                    case .failure:
-                        placeholder
-                    @unknown default:
-                        placeholder
+        GeometryReader { proxy in
+            Group {
+                if let posterURL {
+                    AsyncImage(url: posterURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            if compact {
+                                image.resizable().scaledToFill()
+                            } else {
+                                image.resizable().scaledToFit().accessibilityLabel(imageLabel)
+                            }
+                        case .empty:
+                            ProgressView()
+                        case .failure:
+                            placeholder("포스터 로딩 실패")
+                        @unknown default:
+                            placeholder("포스터 로딩 실패")
+                        }
                     }
+                } else if isLoading {
+                    ProgressView()
+                } else {
+                    placeholder(lookupFailed ? "포스터 조회 실패" : "포스터 없음")
                 }
-            } else if isLoading {
-                ProgressView()
-            } else {
-                placeholder
             }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .clipped()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.quaternary)
-        .clipShape(RoundedRectangle(cornerRadius: compact ? 8 : 14))
+        .background(.white.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: compact ? 8 : 12))
         .accessibilityHidden(compact)
     }
 
-    private var placeholder: some View {
+    private func placeholder(_ message: String) -> some View {
         VStack(spacing: 4) {
             Image(systemName: "photo")
                 .font(compact ? .title3 : .title)
-            if !compact { Text("포스터 준비 중").font(.subheadline) }
+                .accessibilityHidden(true)
+            if !compact {
+                Text(message)
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 6)
+            }
         }
         .foregroundStyle(.secondary)
     }
