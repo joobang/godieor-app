@@ -86,6 +86,10 @@ struct ReleaseTime: Decodable, Hashable {
     let announcedYear: Int?
     let announcedPeriod: String?
 
+    var civilDate: String? {
+        type == "date_only" ? date : displayDate
+    }
+
     var description: String {
         switch type {
         case "date_only": date.map { "\($0) · 날짜만 확인" } ?? "날짜 확인 필요"
@@ -118,17 +122,21 @@ struct ReleaseCard: Identifiable {
     var markets: Set<String> { Set(variants.compactMap(\.releaseMarket)) }
     var commonMarket: String? { markets.count == 1 ? markets.first : nil }
 
+    static func individual(_ event: ReleaseEvent) -> Self {
+        Self(variants: [event])
+    }
+
     static func group(_ events: [ReleaseEvent]) -> [Self] {
         var cards: [Self] = []
         var indices: [GameKey: Int] = [:]
         for event in events {
             guard event.kind == "game_release" else {
-                cards.append(Self(variants: [event]))
+                cards.append(individual(event))
                 continue
             }
             guard event.devices.contains(where: GamePlatform.supported.contains) else { continue }
             guard let contentId = event.contentId, event.time.type != "unknown" else {
-                cards.append(Self(variants: [event]))
+                cards.append(individual(event))
                 continue
             }
             let key = GameKey(contentId: contentId, time: event.time,
@@ -137,7 +145,7 @@ struct ReleaseCard: Identifiable {
                 cards[index].variants.append(event)
             } else {
                 indices[key] = cards.count
-                cards.append(Self(variants: [event]))
+                cards.append(individual(event))
             }
         }
         return cards
@@ -184,8 +192,9 @@ struct ReleaseDetail: Decodable {
     let previousTime: ReleaseTime?
 }
 
-struct CatalogContent: Decodable {
+struct CatalogContent: Decodable, Identifiable {
     let id: String
+    let title: String
     let posterUrl: String?
     let synopsis: String?
 }
@@ -283,24 +292,31 @@ struct PublicAPI {
     }
 
     func events(date: String, filters: PublicFilters, revision: String) async throws -> [ReleaseEvent] {
-        let next = CalendarDay.next(date)
-        var query: [URLQueryItem] = [
+        try await events(from: date, to: CalendarDay.next(date), filters: filters, revision: revision)
+    }
+
+    func events(from: String, to: String, filters: PublicFilters, revision: String? = nil) async throws -> [ReleaseEvent] {
+        let baseQuery: [URLQueryItem] = [
             .init(name: "schedule", value: "dated"),
-            .init(name: "from", value: date),
-            .init(name: "to", value: next),
-            .init(name: "catalogRevision", value: revision),
+            .init(name: "from", value: from),
+            .init(name: "to", value: to),
             .init(name: "limit", value: "100")
         ] + filters.query
         var items: [ReleaseEvent] = []
+        var pinnedRevision = revision
+        var nextCursor: String?
         var seen = Set<String>()
         while true {
+            var query = baseQuery
+            if let pinnedRevision { query.append(.init(name: "catalogRevision", value: pinnedRevision)) }
+            if let nextCursor { query.append(.init(name: "cursor", value: nextCursor)) }
             let page: ReleasePage = try await get("events", query: query)
-            guard page.catalogRevision == revision else { throw PublicAPIError.catalogChanged }
+            if let pinnedRevision, page.catalogRevision != pinnedRevision { throw PublicAPIError.catalogChanged }
+            pinnedRevision = page.catalogRevision
             items.append(contentsOf: page.items)
             guard let cursor = page.nextCursor else { return items }
             guard seen.insert(cursor).inserted else { throw PublicAPIError.tooManyPages }
-            query.removeAll { $0.name == "cursor" }
-            query.append(.init(name: "cursor", value: cursor))
+            nextCursor = cursor
         }
     }
 
@@ -322,11 +338,13 @@ enum CalendarDay {
         return calendar
     }
 
-    static func next(_ day: String) -> String {
+    static func next(_ day: String) -> String { offset(day, by: 1) }
+
+    static func offset(_ day: String, by days: Int) -> String {
         let components = day.split(separator: "-").compactMap { Int($0) }
         guard components.count == 3,
               let date = iso.date(from: DateComponents(year: components[0], month: components[1], day: components[2])),
-              let next = iso.date(byAdding: .day, value: 1, to: date) else { return day }
+              let next = iso.date(byAdding: .day, value: days, to: date) else { return day }
         let result = iso.dateComponents([.year, .month, .day], from: next)
         return String(format: "%04d-%02d-%02d", result.year!, result.month!, result.day!)
     }
