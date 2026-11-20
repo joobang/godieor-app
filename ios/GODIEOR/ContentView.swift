@@ -1,29 +1,17 @@
 import SwiftUI
 
 private enum DiscoveryPalette {
-    static let background = Color(red: 1, green: 0.986, blue: 0.956)
-    static let primary = Color(red: 0.70, green: 0.24, blue: 0.13)
+    static let background = Color(red: 0.965, green: 0.965, blue: 0.949)
+    static let primary = Color(red: 0.76, green: 0.19, blue: 0.12)
     static let panel = Color.white
-    static let text = Color(red: 0.15, green: 0.12, blue: 0.10)
-    static let muted = Color(red: 0.37, green: 0.32, blue: 0.28)
-    static let line = Color(red: 0.26, green: 0.18, blue: 0.12).opacity(0.13)
+    static let text = Color(red: 0.09, green: 0.09, blue: 0.085)
+    static let muted = Color(red: 0.35, green: 0.35, blue: 0.33)
+    static let line = Color.black.opacity(0.13)
+    static let surface = Color(red: 0.933, green: 0.933, blue: 0.913)
+    static let highlight = Color(red: 1, green: 0.94, blue: 0.91)
 
     static func accent(_ key: String) -> Color {
-        switch key {
-        case "ott", "ott_season_premiere": Color(red: 0.05, green: 0.36, blue: 0.26)
-        case "game", "game_release": Color(red: 0.41, green: 0.31, blue: 0.06)
-        case "epl", "epl_match": Color(red: 0.14, green: 0.31, blue: 0.52)
-        default: primary
-        }
-    }
-
-    static func wash(_ key: String) -> Color {
-        switch key {
-        case "ott", "ott_season_premiere": Color(red: 0.81, green: 0.96, blue: 0.85)
-        case "game", "game_release": Color(red: 1, green: 0.93, blue: 0.65)
-        case "epl", "epl_match": Color(red: 0.85, green: 0.91, blue: 1)
-        default: Color(red: 1, green: 0.86, blue: 0.76)
-        }
+        key == "movie" || key == "theatrical_release" ? primary : text
     }
 
     static func symbol(_ key: String) -> String {
@@ -84,7 +72,9 @@ struct ContentView: View {
     private var activeCategories: Set<String> { Set(storedCategories.split(separator: ",").map(String.init)) }
     private var categories: [String] { options.map { $0.0 }.filter { activeCategories.contains($0) } }
     private var activeServices: Set<String> { Set(storedServices.split(separator: ",").map(String.init)) }
-    private var activeDevices: Set<String> { Set(storedDevices.split(separator: ",").map(String.init)) }
+    private var activeDevices: Set<String> {
+        Set(storedDevices.split(separator: ",").map(String.init)).intersection(GamePlatform.supported)
+    }
     private var filters: PublicFilters? {
         guard let catalogOptions else { return nil }
         return PublicFilters(
@@ -175,17 +165,15 @@ struct ContentView: View {
 
     private var dashboardHeader: some View {
         HStack(spacing: 8) {
-            HStack(spacing: 9) {
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 18, weight: .black))
-                    .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
-                    .background(primary, in: Circle())
-                    .accessibilityHidden(true)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("고디어")
-                    .font(.system(.title, design: .rounded, weight: .black))
-                    .tracking(-0.8)
+                    .font(.system(.largeTitle, weight: .black))
+                    .tracking(-2)
                     .accessibilityAddTraits(.isHeader)
+                Image(systemName: "arrow.up.right")
+                    .font(.title3.weight(.black))
+                    .foregroundStyle(primary)
+                    .accessibilityHidden(true)
             }
             Spacer(minLength: 0)
             Button { showingFilters = true } label: {
@@ -221,34 +209,20 @@ struct ContentView: View {
         HStack(spacing: 6) {
             ForEach(options, id: \.0) { option in
                 let selected = activeCategories.contains(option.0)
-                let accent = DiscoveryPalette.accent(option.0)
                 Button {
                     var next = activeCategories
                     if !next.insert(option.0).inserted { next.remove(option.0) }
                     storedCategories = options.map(\.0).filter { next.contains($0) }.joined(separator: ",")
                 } label: {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 3) {
-                            Image(systemName: DiscoveryPalette.symbol(option.0))
-                                .font(.headline.weight(.semibold))
-                            Spacer(minLength: 3)
-                            if selected {
-                                Image(systemName: "checkmark")
-                                    .font(.caption2.weight(.black))
-                            }
-                        }
-                        Text(option.1)
-                            .font(.subheadline.weight(.heavy))
-                            .fixedSize()
-                    }
-                    .foregroundStyle(selected ? accent : DiscoveryPalette.muted)
-                    .padding(10)
-                    .frame(minWidth: 64, minHeight: 66, alignment: .topLeading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(selected ? DiscoveryPalette.wash(option.0) : panel,
-                                in: RoundedRectangle(cornerRadius: 18))
-                    .overlay(RoundedRectangle(cornerRadius: 18)
-                        .strokeBorder(selected ? .clear : DiscoveryPalette.line))
+                    Label(option.1, systemImage: DiscoveryPalette.symbol(option.0))
+                        .font(.subheadline.weight(.bold))
+                        .fixedSize()
+                        .foregroundStyle(selected ? .white : DiscoveryPalette.text)
+                        .padding(.horizontal, 10)
+                        .frame(minHeight: 44)
+                        .frame(maxWidth: .infinity)
+                        .background(selected ? DiscoveryPalette.text : panel, in: Capsule())
+                        .overlay(Capsule().strokeBorder(selected ? .clear : DiscoveryPalette.line))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(option.1) \(selected ? "선택됨" : "선택 안 됨")")
@@ -472,7 +446,7 @@ struct ContentView: View {
                         }
                     }
                     Section("게임 기기 · 선택 안 하면 전체") {
-                        ForEach(catalogOptions.devices, id: \.self) { device in
+                        ForEach(catalogOptions.devices.filter(GamePlatform.supported.contains), id: \.self) { device in
                             Toggle(gameDeviceLabel(device), isOn: storedSetBinding(device, key: "devices"))
                         }
                     }
@@ -562,7 +536,8 @@ struct ContentView: View {
             .padding(.horizontal, 18)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DiscoveryPalette.wash("movie"))
+            .background(panel)
+            Divider().overlay(DiscoveryPalette.line).padding(.horizontal, 16)
 
             if loading && calendar == nil {
                 ProgressView("달력 불러오는 중")
@@ -586,8 +561,8 @@ struct ContentView: View {
                 .font(.caption.monospacedDigit().weight(.semibold))
                 .foregroundStyle(DiscoveryPalette.muted)
             Text("\(parts.month!)월")
-                .font(.system(.largeTitle, design: .rounded, weight: .black))
-                .tracking(-1.4)
+                .font(.system(.largeTitle, weight: .black))
+                .tracking(-1.8)
         }
         .fixedSize()
         .accessibilityElement(children: .combine)
@@ -606,7 +581,7 @@ struct ContentView: View {
             .padding(.horizontal, 12)
             .frame(minHeight: 44)
             .foregroundStyle(primary)
-            .background(panel.opacity(0.85), in: Capsule())
+            .background(DiscoveryPalette.highlight, in: Capsule())
             Button { moveMonth(-1) } label: { monthArrow("chevron.left") }
                 .accessibilityLabel("이전 달")
                 .disabled(!canMoveToPreviousMonth)
@@ -649,7 +624,7 @@ struct ContentView: View {
                         Button { selectDay(date) } label: {
                             VStack(spacing: 1) {
                                 Text(verbatim: "\(number)")
-                                    .font(.system(.subheadline, design: .rounded, weight: .bold).monospacedDigit())
+                                    .font(.system(.subheadline, weight: .bold).monospacedDigit())
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.65)
                                 Circle()
@@ -686,6 +661,12 @@ struct ContentView: View {
         loadingDay = true
     }
 
+    private func gameCardTime(_ card: ReleaseCard) -> String {
+        let event = card.event
+        guard event.kind == "game_release", let market = card.commonMarket else { return event.time.description }
+        return "\(gameMarketLabel(market)) · \(event.time.description)"
+    }
+
     private func dayList(_ date: String) -> some View {
         let cards = ReleaseCard.group(events)
         let rowLayout = typeSize.isAccessibilitySize
@@ -694,11 +675,11 @@ struct ContentView: View {
         return LazyVStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(date == todaySelection.date ? "오늘 일정" : dateLabel(date))
-                    .font(.system(.title, design: .rounded, weight: .black))
+                    .font(.system(.title, weight: .black))
                     .tracking(-0.55)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 4)
-                Text(loadingDay || dayError != nil ? "일정" : "\(cards.count)개 일정")
+                Text(loadingDay || dayError != nil ? "일정" : "\(cards.count)개")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(primary)
                     .padding(.horizontal, 9)
@@ -719,7 +700,7 @@ struct ContentView: View {
                 Text(dayError).foregroundStyle(.red).font(.footnote)
                 Button("다시 시도") { Task { await loadDay(date, selection: selectionKey) } }
             }
-            if !loadingDay && dayError == nil && events.isEmpty {
+            if !loadingDay && dayError == nil && cards.isEmpty {
                 ContentUnavailableView("이날은 일정이 없어요", systemImage: "calendar.badge.clock",
                     description: Text("다른 날짜를 선택하거나 분야·플랫폼 필터를 조정해 보세요."))
                     .frame(maxWidth: .infinity)
@@ -746,7 +727,7 @@ struct ContentView: View {
                                     }
                                 }
                                 Text(item.title)
-                                    .font(.system(card.id == cards.first?.id ? .title3 : .body, design: .rounded, weight: .heavy))
+                                    .font(.system(card.id == cards.first?.id ? .title3 : .body, weight: .heavy))
                                     .foregroundStyle(DiscoveryPalette.text)
                                     .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -762,13 +743,11 @@ struct ContentView: View {
                                 if !card.devices.isEmpty {
                                     HStack(spacing: 6) {
                                         ForEach(card.devices, id: \.self) { device in
-                                            PlatformIcon(key: device, size: 22)
-                                                .accessibilityLabel(gameDeviceLabel(device))
+                                            GamePlatformIcon(device: device)
                                         }
                                     }
                                 }
-                                Text(item.releaseMarket == "WORLD" && item.kind == "game_release"
-                                     ? "글로벌 · \(item.time.description)" : item.time.description)
+                                Text(gameCardTime(card))
                                     .font(.caption)
                                     .foregroundStyle(DiscoveryPalette.muted)
                                     .lineLimit(2)
@@ -784,9 +763,9 @@ struct ContentView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(card.id == cards.first?.id ? DiscoveryPalette.wash(item.kind) : panel,
-                                    in: RoundedRectangle(cornerRadius: 20))
-                        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(DiscoveryPalette.line))
+                        .background(panel, in: RoundedRectangle(cornerRadius: 18))
+                        .overlay(RoundedRectangle(cornerRadius: 18)
+                            .strokeBorder(card.id == cards.first?.id ? primary.opacity(0.40) : DiscoveryPalette.line))
                         .accessibilityElement(children: .combine)
                     }
                     .buttonStyle(.plain)
@@ -936,7 +915,7 @@ private struct ReleaseCardDetail: View {
 
     var body: some View {
         let active = card.variants.first { $0.id == selectedID } ?? card.event
-        EventDetailView(event: active, filters: filters, api: api)
+        EventDetailView(event: active, filters: filters, api: api, cardDevices: card.devices)
             .id(active.id)
             .toolbar {
                 if card.variants.count > 1 {
@@ -961,8 +940,11 @@ private struct ReleaseCardDetail: View {
     private func variantLabel(_ event: ReleaseEvent, index: Int) -> String {
         let label = event.devices.map(gameDeviceLabel).joined(separator: ", ")
         if label.isEmpty { return "일정 \(index + 1)" }
-        return card.variants.filter { $0.devices == event.devices }.count > 1
-            ? "\(label) · 일정 \(index + 1)" : label
+        let sharesDevice = card.variants.filter { $0.devices == event.devices }.count > 1
+        guard card.markets.count > 1 || sharesDevice else { return label }
+        let market = gameMarketLabel(event.releaseMarket)
+        let sameRegion = card.variants.filter { $0.devices == event.devices && $0.releaseMarket == event.releaseMarket }
+        return sameRegion.count > 1 ? "\(label) · \(market) · \(index + 1)" : "\(label) · \(market)"
     }
 }
 
@@ -970,6 +952,7 @@ private struct EventDetailView: View {
     let event: ReleaseEvent
     let filters: PublicFilters
     let api: PublicAPI
+    var cardDevices: [String] = []
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var detail: ReleaseDetail?
@@ -1067,7 +1050,8 @@ private struct EventDetailView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DiscoveryPalette.wash(displayedEvent.kind), in: RoundedRectangle(cornerRadius: 27))
+        .background(DiscoveryPalette.panel, in: RoundedRectangle(cornerRadius: 23))
+        .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(DiscoveryPalette.line))
     }
 
     private var heroHeading: some View {
@@ -1076,10 +1060,20 @@ private struct EventDetailView: View {
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(accent)
             Text(displayedEvent.title)
-                .font(.system(.largeTitle, design: .rounded, weight: .black))
-                .tracking(-0.7)
+                .font(.system(.largeTitle, weight: .black))
+                .tracking(-1.1)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
+            if !cardDevices.isEmpty {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 6) {
+                        ForEach(cardDevices, id: \.self) { GamePlatformIcon(device: $0) }
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(cardDevices, id: \.self) { GamePlatformIcon(device: $0) }
+                    }
+                }
+            }
             if displayedEvent.dataOrigin == "fixture" {
                 Text("가상 데이터")
                     .font(.caption.weight(.semibold))
@@ -1134,8 +1128,7 @@ private struct EventDetailView: View {
     private var schedule: some View {
         detailSection("공개 정보", icon: "info.circle") {
             if let market = displayedEvent.releaseMarket {
-                detailRow("공개 지역", value: market == "WORLD" ? "글로벌" :
-                    (Locale(identifier: "ko_KR").localizedString(forRegionCode: market) ?? market))
+                detailRow("공개 지역", value: gameMarketLabel(market))
             }
             if let country = displayedEvent.venueCountry {
                 detailRow("개최국", value: Locale(identifier: "ko_KR").localizedString(forRegionCode: country) ?? country)
@@ -1360,6 +1353,38 @@ private struct PosterArtwork: View {
 
 // Brand favicons are loaded from the actual platform domains. A readable fallback
 // remains visible when the icon endpoint is offline.
+private func gameMarketLabel(_ market: String?) -> String {
+    guard let market else { return "지역 미정" }
+    return market == "WORLD" ? "글로벌" :
+        (Locale(identifier: "ko_KR").localizedString(forRegionCode: market) ?? market)
+}
+
+private struct GamePlatformIcon: View {
+    let device: String
+
+    var body: some View {
+        Group {
+            switch device {
+            case "playstation":
+                Image(systemName: "playstation.logo")
+            case "xbox":
+                Image(systemName: "xbox.logo")
+            case "ios":
+                Image(systemName: "apple.logo")
+            case "android":
+                Image(systemName: "candybarphone")
+            default:
+                Image(systemName: "gamecontroller.fill")
+            }
+        }
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundStyle(DiscoveryPalette.text)
+        .frame(width: 26, height: 24)
+        .background(DiscoveryPalette.surface, in: RoundedRectangle(cornerRadius: 6))
+        .accessibilityLabel(gameDeviceLabel(device))
+    }
+}
+
 private struct PlatformIcon: View {
     let key: String
     var size: CGFloat = 24

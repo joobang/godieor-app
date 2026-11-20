@@ -14,19 +14,22 @@ struct ReleaseCardChecks {
             return try JSONDecoder().decode(ReleaseEvent.self, from: JSONSerialization.data(withJSONObject: row))
         }
         let cards = ReleaseCard.group(try [
-            event("first", device: "pc"),
+            event("pc", device: "pc"),
             event("ott", device: "ios", kind: "ott_season_premiere"),
             event("switch", device: "switch"),
             event("xbox", device: "xbox"),
-            event("later", device: "pc", day: "2026-11-21"),
-            event("kr", device: "pc", market: "KR"),
-            event("cancelled", device: "pc", status: "cancelled"),
-            event("same-name", device: "pc", content: "two"),
-            event("fixture", device: "pc", origin: "fixture")
+            event("later", device: "xbox", day: "2026-11-21"),
+            event("kr", device: "playstation", market: "KR"),
+            event("cancelled", device: "switch", status: "cancelled"),
+            event("same-name", device: "ios", content: "two"),
+            event("fixture", device: "android", origin: "fixture")
         ])
-        precondition(cards.map(\.id) == ["first", "ott", "later", "kr", "cancelled", "same-name", "fixture"])
-        precondition(cards[0].variants.map(\.id) == ["first", "switch", "xbox"])
-        precondition(cards[0].devices == ["pc", "switch", "xbox"])
+        precondition(cards.map(\.id) == ["ott", "switch", "later", "cancelled", "same-name", "fixture"])
+        precondition(cards[1].variants.map(\.id) == ["switch", "xbox", "kr"])
+        precondition(Set(cards[1].devices) == ["playstation", "switch", "xbox"])
+        precondition(cards[1].markets == ["WORLD", "KR"])
+        precondition(cards[1].commonMarket == nil)
+        precondition(cards[2].commonMarket == "WORLD")
         print("Release card grouping checks passed")
     }
 }

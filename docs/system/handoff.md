@@ -1,3 +1,9 @@
+## UI-09 / DATA-93 · 밝은 화면, 콘솔·모바일 게임 및 과거 일정 정리 (2026-11-20)
+
+- 앱 홈·달력·카드·상세는 밝은 중립색, 선명한 활자, 레드 포인트를 사용한다. 동일 작품의 동일 공개 슬롯을 카드 하나로 표시하고 기기 아이콘을 합친다. 원본 app `docs/ai/tasks/UI-09-console-editorial.md`.
+- IGDB 수집·운영 탐색의 기기는 PlayStation·Xbox·Switch·iOS·Android다. 기존 각 출시의 원본 ID 및 찜은 보존한다.
+- 오래된 날짜 일정은 GitHub Actions에서 미리보기 후 배치 정리할 수 있다. 찜·미정은 보호하고 정리된 과거 일정 재적재를 막는다. backend 원본 `docs/tasks/DATA-93-console-retention.md`. 공통 revision SYNC-2026-11-20-DATA-93.
+
 ## UI-08 · 크림·피치 테마와 홈/상세 재구성 (2026-11-20)
 
 - 크림 배경·피치 달력·민트/레몬 분야 필터, 첫 일정 강조 및 포스터 중심 상세. 원본 app `docs/ai/tasks/UI-08-editorial-light.md`. 큰 글자 카드 세로 배치. iPhone 개발 서명 0.1.0 (6) 설치 확인. revision SYNC-2026-11-20-UI-08.
