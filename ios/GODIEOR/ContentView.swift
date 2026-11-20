@@ -1,6 +1,6 @@
 import SwiftUI
 
-private enum DiscoveryPalette {
+enum DiscoveryPalette {
     static let background = Color(red: 0.965, green: 0.965, blue: 0.949)
     static let primary = Color(red: 0.76, green: 0.19, blue: 0.12)
     static let panel = Color.white
@@ -9,6 +9,7 @@ private enum DiscoveryPalette {
     static let line = Color.black.opacity(0.13)
     static let surface = Color(red: 0.933, green: 0.933, blue: 0.913)
     static let highlight = Color(red: 1, green: 0.94, blue: 0.91)
+    static let feedGameAccent = Color(red: 0.74, green: 0.52, blue: 0.14)
 
     static func accent(_ key: String) -> Color {
         key == "movie" || key == "theatrical_release" ? primary : text
@@ -33,6 +34,8 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var typeSize
     @StateObject private var account = AccountState()
+    @State private var clock = Date.now
+    @State private var loadedCalendarKey = ""
     @State private var month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
     @State private var selectedDate: String?
     @State private var shouldSelectToday = true
@@ -56,10 +59,22 @@ struct ContentView: View {
     @State private var dayCache: [String: [ReleaseEvent]] = [:]
     @State private var errorText: String?
     @State private var dayError: String?
+    private enum DashboardTab: Hashable { case home, calendar, saved }
+    @State private var tab: DashboardTab = .home
+    @State private var feed = FeedState()
     @State private var selection: DetailSelection?
+    @State private var selectedContent: CatalogContent?
+    private struct FeedState {
+        var key = ""
+        var requestID = UUID()
+        var cards: [ReleaseCard] = []
+        var loading = false
+        var error: String?
+    }
     private struct DetailSelection: Identifiable {
         let card: ReleaseCard
         let filters: PublicFilters
+        var ownerID: String? = nil
         var id: String { card.id }
     }
     private let api = PublicAPI()
@@ -95,72 +110,312 @@ struct ContentView: View {
     private var days: [String: ReleaseDay] { Dictionary(uniqueKeysWithValues: (calendar?.days ?? []).map { ($0.date, $0) }) }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    dashboardHeader
-                    VStack(alignment: .leading, spacing: 10) {
-                        categoryFilters
-                        if activeCategories.contains("ott") || !activeServices.isEmpty {
-                            serviceChips
-                        }
-                    }
-                    calendarContent
+        TabView(selection: $tab) {
+            dashboardPage {
+                posterFeed
+                    .task(id: feedKey) { await loadFeed() }
+            }
+            .refreshable { await loadFeed() }
+            .tabItem { Label("홈", systemImage: "house") }
+            .tag(DashboardTab.home)
+
+            dashboardPage {
+                VStack(alignment: .leading, spacing: 10) {
+                    categoryFilters
+                    if activeCategories.contains("ott") || !activeServices.isEmpty { serviceChips }
                 }
-                .frame(maxWidth: 600)
                 .padding(.horizontal, 18)
-                .padding(.top, 8)
-                .padding(.bottom, 36)
-                .frame(maxWidth: .infinity)
-            }
-            .background(backdrop.ignoresSafeArea())
-            .foregroundStyle(DiscoveryPalette.text)
-            .tint(primary)
-            .toolbar(.hidden, for: .navigationBar)
-            .preferredColorScheme(.light)
-            .sheet(item: $selection) { selected in
-                NavigationStack {
-                    ReleaseCardDetail(card: selected.card, filters: selected.filters, api: api)
-                }
-            }
-            .sheet(isPresented: $showingFilters) { filterSheet }
-            .sheet(isPresented: $showingAccount) {
-                NavigationStack {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 24) {
-                            accountPanel
-                            Divider()
-                            tmdbCredits
-                        }
-                        .padding()
-                    }
-                        .navigationTitle("계정 및 동기화")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button("완료") { showingAccount = false }
-                            }
-                        }
-                }
-            }
-            .onChange(of: account.settings?.version) { _, _ in applyAccountSettings() }
-            .onChange(of: account.user?.id) { previous, current in
-                if previous != nil && previous != current { resetDeviceFilters() }
-                if current != nil { applyAccountSettings() }
-            }
-            .task { await initializeAccount() }
-            .onChange(of: scenePhase) { _, phase in
-                guard phase == .active, account.hasRestorableSession else { return }
-                Task {
-                    await account.refresh()
-                    applyAccountSettings()
-                }
+                calendarContent.padding(.horizontal, 18)
             }
             .task(id: selectionKey) { await loadMonth(selection: selectionKey) }
             .task(id: daySelectionKey) {
                 if let selectedDate { await loadDay(selectedDate, selection: selectionKey) }
             }
+            .tabItem { Label("달력", systemImage: "calendar") }
+            .tag(DashboardTab.calendar)
+
+            dashboardPage { savedPage.id(account.user?.id).padding(.horizontal, 18) }
+                .tabItem { Label("찜", systemImage: "bookmark") }
+                .tag(DashboardTab.saved)
         }
+        .background(backdrop.ignoresSafeArea())
+        .foregroundStyle(DiscoveryPalette.text)
+        .tint(primary)
+        .preferredColorScheme(.light)
+        .sheet(item: $selection) { selected in
+            NavigationStack {
+                ReleaseCardDetail(card: selected.card, filters: selected.filters, api: api)
+            }
+        }
+        .sheet(item: $selectedContent) { content in
+            NavigationStack { SavedContentDetail(content: content) }
+        }
+        .sheet(isPresented: $showingFilters) { filterSheet }
+        .sheet(isPresented: $showingAccount) {
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        accountPanel
+                        Divider()
+                        tmdbCredits
+                    }
+                    .padding()
+                }
+                    .navigationTitle("계정 및 동기화")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("완료") { showingAccount = false }
+                        }
+                    }
+            }
+        }
+        .onChange(of: account.settings?.version) { _, _ in applyAccountSettings() }
+        .onChange(of: account.user?.id) { previous, current in
+            if previous != current {
+                selectedContent = nil
+                if selection?.ownerID != nil { selection = nil }
+                if previous != nil { resetDeviceFilters() }
+            }
+            if current != nil { applyAccountSettings() }
+        }
+        .task { await initializeAccount() }
+        .task(id: "\(displayCalendar.timeZone.identifier)|\(scenePhase)") {
+            if scenePhase == .active { await updateDateAtMidnight(calendar: displayCalendar) }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, account.hasRestorableSession else { return }
+            Task {
+                await account.refresh()
+                applyAccountSettings()
+            }
+        }
+    }
+
+    private func dashboardPage<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 17) {
+                dashboardHeader.padding(.horizontal, 18)
+                content()
+            }
+            .frame(maxWidth: 600)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity)
+        }
+        .background(backdrop.ignoresSafeArea())
+    }
+
+    private var feedKey: String {
+        guard let filters else { return "waiting" }
+        return ([todaySelection.date] + filters.query.compactMap(\.value)).joined(separator: "|")
+    }
+
+    private var posterFeed: some View {
+        let today = todaySelection.date
+        let start = CalendarDay.offset(today, by: -2)
+        return VStack(alignment: .leading, spacing: 13) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(dateLabel(start)) – \(dateLabel(today))")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(DiscoveryPalette.muted)
+                Text("공개 피드")
+                    .font(.system(.largeTitle, weight: .black))
+                    .tracking(-1)
+                    .accessibilityAddTraits(.isHeader)
+            }
+            .padding(.horizontal, 18)
+
+            if let optionsError {
+                feedMessage("필터 정보를 불러오지 못했어요", detail: optionsError, icon: "wifi.exclamationmark")
+                Button("다시 시도") { Task { await loadOptions() } }.padding(.horizontal, 18)
+            } else if filters != nil && categories.isEmpty {
+                feedMessage("표시할 분야를 선택해 주세요", detail: "필터에서 영화, OTT, 게임, EPL을 고를 수 있어요.", icon: "slider.horizontal.3")
+                Button("필터 열기") { showingFilters = true }.padding(.horizontal, 18)
+            } else if filters == nil || feed.key != feedKey || (feed.loading && feed.cards.isEmpty) {
+                ProgressView("공개 일정 불러오는 중").frame(maxWidth: .infinity).padding(.vertical, 44)
+            } else {
+                if !feed.cards.isEmpty {
+                    ScrollView(.horizontal) {
+                        LazyHStack(alignment: .top, spacing: 12) {
+                            ForEach(feed.cards) { card in
+                                PosterFeedCard(card: card, api: api,
+                                               dateText: feedDate(card.event.time),
+                                               saved: isFavorite(card.event),
+                                               canSave: account.user == nil || account.favoritesReady || account.syncFailed,
+                                               open: { open(card) },
+                                               save: { toggleFavorite(card.event) })
+                                    .containerRelativeFrame(.horizontal) { width, _ in
+                                        width * (typeSize.isAccessibilitySize ? 1 : 0.89)
+                                    }
+                            }
+                        }
+                        .scrollTargetLayout()
+                    }
+                    .safeAreaPadding(.horizontal, 18)
+                    .scrollTargetBehavior(.viewAligned)
+                    .scrollIndicators(.hidden)
+                    .accessibilityIdentifier("poster-feed")
+                    feedDateLinks(ending: today)
+                }
+                if let error = feed.error {
+                    feedMessage("공개 일정을 불러오지 못했어요", detail: error, icon: "wifi.exclamationmark")
+                    Button("다시 시도") { Task { await loadFeed() } }.padding(.horizontal, 18)
+                } else if feed.cards.isEmpty {
+                    feedMessage("최근 공개 일정이 없어요", detail: "달력에서 다른 날짜를 찾아볼 수 있어요.", icon: "rectangle.stack")
+                    Button("달력 열기") { tab = .calendar }.padding(.horizontal, 18)
+                }
+            }
+        }
+    }
+
+    @MainActor private func updateDateAtMidnight(calendar: Calendar) async {
+        while !Task.isCancelled {
+            clock = .now
+            guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: clock)) else { return }
+            do { try await Task.sleep(for: .seconds(max(0.1, tomorrow.timeIntervalSinceNow))) }
+            catch { return }
+        }
+    }
+
+    private func feedDateLinks(ending today: String) -> some View {
+        let counts = Dictionary(grouping: feed.cards, by: { $0.event.time.civilDate ?? "" }).mapValues(\.count)
+        return VStack(alignment: .leading, spacing: 9) {
+            Divider()
+            Text("날짜별 일정")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 7) { feedDateButtons(ending: today, counts: counts) }
+                VStack(alignment: .leading, spacing: 6) { feedDateButtons(ending: today, counts: counts) }
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 15)
+    }
+
+    private func feedDateButtons(ending today: String, counts: [String: Int]) -> some View {
+        ForEach([0, -1, -2], id: \.self) { offset in
+            let date = CalendarDay.offset(today, by: offset)
+            Button {
+                let monthParts = date.split(separator: "-").prefix(2).compactMap { Int($0) }
+                guard monthParts.count == 2,
+                      let monthStart = CalendarDay.iso.date(from: DateComponents(year: monthParts[0], month: monthParts[1])) else { return }
+                month = monthStart
+                selectDay(date)
+                tab = .calendar
+            } label: {
+                HStack(spacing: 4) {
+                    Text(offset == 0 ? "오늘" : dateLabel(date))
+                    Text("\(counts[date, default: 0])").foregroundStyle(DiscoveryPalette.muted)
+                }
+                .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.horizontal, 10)
+                .frame(minHeight: 44)
+                .background(DiscoveryPalette.surface, in: Capsule())
+            }
+            .accessibilityLabel("\(dateLabel(date)) 일정 \(counts[date, default: 0])건")
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func feedMessage(_ title: String, detail: String, icon: String) -> some View {
+        ContentUnavailableView(title, systemImage: icon, description: Text(detail)).padding(.horizontal, 18)
+    }
+
+    private func feedDate(_ time: ReleaseTime) -> String {
+        guard let day = time.civilDate else { return time.description }
+        let label = day == todaySelection.date ? "오늘" : dateLabel(day)
+        if let clock = time.displayTime { return "\(label) · \(clock)" }
+        return label
+    }
+
+    @MainActor private func loadFeed() async {
+        guard let filters, !filters.categories.isEmpty else { feed = FeedState(); return }
+        let key = feedKey
+        let today = todaySelection.date
+        let start = max(historyStart, CalendarDay.offset(today, by: -2))
+        let end = CalendarDay.next(today)
+        let requestID = UUID()
+        if feed.key != key { feed = FeedState(key: key) }
+        feed.requestID = requestID
+        feed.loading = true
+        feed.error = nil
+        defer { if feed.requestID == requestID { feed.loading = false } }
+        do {
+            let records: [ReleaseEvent]
+            do {
+                records = try await api.events(from: start, to: end, filters: filters)
+            } catch PublicAPIError.catalogChanged {
+                records = try await api.events(from: start, to: end, filters: filters)
+            }
+            guard !Task.isCancelled, feedKey == key, feed.requestID == requestID else { return }
+            let sorted = records.sorted { ($0.time.civilDate ?? "") > ($1.time.civilDate ?? "") }
+            feed.cards = ReleaseCard.group(sorted)
+        } catch {
+            guard !Task.isCancelled, feedKey == key, feed.requestID == requestID else { return }
+            feed.error = error.localizedDescription
+        }
+    }
+
+    private func open(_ card: ReleaseCard) {
+        guard let filters else { return }
+        selection = DetailSelection(card: card, filters: filters)
+    }
+
+    private func isFavorite(_ event: ReleaseEvent) -> Bool {
+        event.contentId.map { account.favoriteContentIDs.contains($0) } ?? account.favoriteEventIDs.contains(event.id)
+    }
+
+    private func toggleFavorite(_ event: ReleaseEvent) {
+        guard account.user != nil, account.favoritesReady else { showingAccount = true; return }
+        Task {
+            if let id = event.contentId { await account.toggleFavorite(type: "content", id: id) }
+            else { await account.toggleFavorite(type: "event", id: event.id) }
+        }
+    }
+
+    private var savedPage: some View {
+        LazyVStack(alignment: .leading, spacing: 12) {
+            Text("찜").font(.largeTitle.weight(.black)).accessibilityAddTraits(.isHeader)
+            if account.user == nil {
+                ContentUnavailableView("계정 연결", systemImage: "bookmark", description: Text("로그인하면 저장한 작품과 일정을 볼 수 있어요."))
+                Button("계정 열기") { showingAccount = true }
+            } else if account.isSyncing && account.favoriteContentIDs.isEmpty && account.favoriteEventIDs.isEmpty {
+                ProgressView("찜 불러오는 중")
+            } else if account.syncFailed && account.favoriteContentIDs.isEmpty && account.favoriteEventIDs.isEmpty {
+                ContentUnavailableView("찜을 불러오지 못했어요", systemImage: "wifi.exclamationmark")
+                Button("다시 시도") { Task { await account.refresh() } }
+            } else if account.favoriteContentIDs.isEmpty && account.favoriteEventIDs.isEmpty {
+                ContentUnavailableView("아직 찜한 작품이 없어요", systemImage: "bookmark")
+            } else {
+                ForEach(account.favoriteContentIDs.sorted(), id: \.self) { id in
+                    savedRow(id: id, type: .content)
+                }
+                ForEach(account.favoriteEventIDs.sorted(), id: \.self) { id in
+                    savedRow(id: id, type: .event)
+                }
+            }
+        }
+    }
+
+    private func savedRow(id: String, type: SavedReleaseRow.Target) -> some View {
+        let ownerID = account.user?.id
+        return SavedReleaseRow(id: id, type: type, filters: filters, api: api,
+            openContent: { content in
+                if let ownerID, account.user?.id == ownerID { selectedContent = content }
+            }, openEvent: { card in
+                if let ownerID, account.user?.id == ownerID, let filters {
+                    selection = DetailSelection(card: card, filters: filters, ownerID: ownerID)
+                }
+            }, remove: {
+                Task {
+                    guard let ownerID, account.user?.id == ownerID, account.favoritesReady else { return }
+                    let exists = type == .content ? account.favoriteContentIDs.contains(id) : account.favoriteEventIDs.contains(id)
+                    if exists { await account.toggleFavorite(type: type.rawValue, id: id) }
+                }
+            })
     }
 
     private var dashboardHeader: some View {
@@ -210,9 +465,7 @@ struct ContentView: View {
             ForEach(options, id: \.0) { option in
                 let selected = activeCategories.contains(option.0)
                 Button {
-                    var next = activeCategories
-                    if !next.insert(option.0).inserted { next.remove(option.0) }
-                    storedCategories = options.map(\.0).filter { next.contains($0) }.joined(separator: ",")
+                    setCategory(option.0, enabled: !selected)
                 } label: {
                     Label(option.1, systemImage: DiscoveryPalette.symbol(option.0))
                         .font(.subheadline.weight(.bold))
@@ -229,6 +482,12 @@ struct ContentView: View {
                 .accessibilityAddTraits(selected ? [.isSelected] : [])
             }
         }
+    }
+
+    private func setCategory(_ key: String, enabled: Bool) {
+        var next = activeCategories
+        if enabled { next.insert(key) } else { next.remove(key) }
+        storedCategories = options.map(\.0).filter { next.contains($0) }.joined(separator: ",")
     }
 
     private var serviceChips: some View {
@@ -432,6 +691,14 @@ struct ContentView: View {
         NavigationStack {
             Form {
                 if let catalogOptions {
+                    Section("분야") {
+                        ForEach(options, id: \.0) { category in
+                            Toggle(category.1, isOn: Binding(
+                                get: { activeCategories.contains(category.0) },
+                                set: { setCategory(category.0, enabled: $0) }
+                            ))
+                        }
+                    }
                     Section("지역 및 시간대") {
                         Picker("국가", selection: $storedCountry) {
                             ForEach(catalogOptions.countries, id: \.self) { Text($0).tag($0) }
@@ -497,7 +764,7 @@ struct ContentView: View {
 
     private var historyStart: String {
         let calendar = displayCalendar
-        let cutoff = calendar.date(byAdding: .month, value: -1, to: .now)!
+        let cutoff = calendar.date(byAdding: .month, value: -1, to: clock)!
         let parts = calendar.dateComponents([.year, .month, .day], from: cutoff)
         return max("2026-10-01", String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!))
     }
@@ -507,7 +774,7 @@ struct ContentView: View {
     }
 
     private var todaySelection: (date: String, month: Date) {
-        let parts = displayCalendar.dateComponents([.year, .month, .day], from: .now)
+        let parts = displayCalendar.dateComponents([.year, .month, .day], from: clock)
         let date = String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
         let monthStart = CalendarDay.iso.date(from: DateComponents(year: parts.year, month: parts.month))!
         return (date, monthStart)
@@ -769,23 +1036,15 @@ struct ContentView: View {
                         .accessibilityElement(children: .combine)
                     }
                     .buttonStyle(.plain)
-                if account.user != nil {
-                    let saved = item.contentId.map { account.favoriteContentIDs.contains($0) } ?? account.favoriteEventIDs.contains(item.id)
-                    Button {
-                        Task {
-                            if let contentId = item.contentId {
-                                await account.toggleFavorite(type: "content", id: contentId)
-                            } else {
-                                await account.toggleFavorite(type: "event", id: item.id)
-                            }
+                    if account.user != nil && account.favoritesReady {
+                        let saved = isFavorite(item)
+                        Button { toggleFavorite(item) } label: {
+                            Image(systemName: saved ? "heart.fill" : "heart")
+                                .foregroundStyle(saved ? .red : .secondary)
+                                .frame(width: 44, height: 44)
                         }
-                    } label: {
-                        Image(systemName: saved ? "heart.fill" : "heart")
-                            .foregroundStyle(saved ? .red : .secondary)
+                        .accessibilityLabel(saved ? "찜 해제" : "찜")
                     }
-                    .accessibilityLabel(saved ? "찜 해제" : "찜")
-                    .frame(width: 44, height: 44)
-                }
                 }
             }
         }
@@ -807,6 +1066,7 @@ struct ContentView: View {
 
     @MainActor private func loadMonth(selection: String) async {
         guard let filters, !filters.categories.isEmpty else {
+            loadedCalendarKey = ""
             calendar = nil
             events = []
             errorText = nil
@@ -822,11 +1082,15 @@ struct ContentView: View {
             }
             selectDay(today.date)
         }
-        calendar = lastCalendars[selection]
-        showingCachedCalendar = calendar != nil
-        events = []
+        let cached = lastCalendars[selection]
+        if loadedCalendarKey != selection || calendar?.catalogRevision != cached?.catalogRevision {
+            events = cached?.days.first { $0.date == selectedDate }?.previews ?? []
+            dayError = nil
+        }
+        loadedCalendarKey = selection
+        calendar = cached
+        showingCachedCalendar = cached != nil
         errorText = nil
-        dayError = nil
         loading = true
         defer { if selection == selectionKey { loading = false } }
         do {
@@ -885,7 +1149,7 @@ struct ContentView: View {
     }
 }
 
-private func gameDeviceLabel(_ device: String) -> String {
+func gameDeviceLabel(_ device: String) -> String {
     switch device {
     case "ios": return "iOS (아이폰·아이패드)"
     case "android": return "Android"
@@ -897,7 +1161,7 @@ private func gameDeviceLabel(_ device: String) -> String {
     }
 }
 
-private func ottName(_ service: String) -> String {
+func ottName(_ service: String) -> String {
     switch service {
     case "netflix": "넷플릭스"
     case "disney_plus": "디즈니플러스"
@@ -1250,7 +1514,7 @@ private struct EventDetailView: View {
     }
 }
 
-private struct EventPosterThumbnail: View {
+struct EventPosterThumbnail: View {
     let contentId: String?
     let kind: String
     let api: PublicAPI
@@ -1279,7 +1543,7 @@ private struct EventPosterThumbnail: View {
     }
 }
 
-private struct PosterArtwork: View {
+struct PosterArtwork: View {
     let urlString: String?
     var isLoading = false
     var compact = false
@@ -1359,7 +1623,7 @@ private func gameMarketLabel(_ market: String?) -> String {
         (Locale(identifier: "ko_KR").localizedString(forRegionCode: market) ?? market)
 }
 
-private struct GamePlatformIcon: View {
+struct GamePlatformIcon: View {
     let device: String
 
     var body: some View {
@@ -1385,7 +1649,7 @@ private struct GamePlatformIcon: View {
     }
 }
 
-private struct PlatformIcon: View {
+struct PlatformIcon: View {
     let key: String
     var size: CGFloat = 24
 
@@ -1425,9 +1689,14 @@ private struct PlatformIcon: View {
     }
 
     private var fallback: some View {
-        Image(systemName: "play.square.fill")
-            .resizable()
-            .scaledToFit()
+        let labels = ["netflix": "N", "disney_plus": "D+", "tving": "T", "coupang_play": "CP"]
+        return Group {
+            if let label = labels[key] {
+                Text(label).font(.system(size: size * 0.49, weight: .heavy))
+            } else {
+                Image(systemName: "play.square.fill").resizable().scaledToFit()
+            }
+        }
             .foregroundStyle(DiscoveryPalette.muted)
     }
 }

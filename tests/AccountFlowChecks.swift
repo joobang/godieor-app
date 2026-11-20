@@ -146,6 +146,29 @@ private struct CheckFailure: Error { let message: String }
                 s.intercept={r in guard r.url!.path == "/v1/me/favorites" else{return nil};return try s.reply(r,200,["favoritesVersion":"1","items":[],"nextCursor":"cycle"])}
                 await a.refresh();try check(a.syncFailed && a.favoriteEventIDs == ["event-a"] && a.lastSyncedAt == synced, "invalid paging must preserve last successful snapshot")
             }),
+            ("favorite writes wait for the first account snapshot", {
+                let server = Server()
+                let store = MemoryStore()
+                store.token = nil
+                let account = server.state(store)
+                let snapshot = Gate()
+                server.intercept = { request in
+                    if request.url?.path == "/v1/me/favorites" { await snapshot.wait() }
+                    return nil
+                }
+                let login = Task { await account.signIn() }
+                try await until { snapshot.waiting }
+                let waitingForFavorites = account.user?.id == "user-b" && !account.favoritesReady
+                await account.toggleFavorite(type: "content", id: "content-b")
+                let wroteBeforeSnapshot = server.requests.contains { $0.httpMethod == "PUT" }
+                snapshot.release()
+                await login.value
+                try check(waitingForFavorites && !wroteBeforeSnapshot, "write must wait for first snapshot")
+                try check(account.favoritesReady && account.favoriteContentIDs.contains("content-b"), "existing favorite must load")
+                await account.toggleFavorite(type: "content", id: "content-b")
+                try check(server.requests.contains { $0.httpMethod == "DELETE" && $0.url?.lastPathComponent == "content-b" },
+                          "after loading an existing favorite, tapping must remove it")
+            }),
             ("favorite writes and retries after failure", {
                 let s=Server(), store=MemoryStore();let a=s.state(store);await a.restore()
                 s.intercept={r in r.httpMethod == "PUT" ? try s.reply(r,500):nil}
