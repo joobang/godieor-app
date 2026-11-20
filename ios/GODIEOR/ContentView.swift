@@ -1,19 +1,20 @@
 import SwiftUI
 
 private enum DiscoveryPalette {
-    static let ink = Color(red: 0.054, green: 0.059, blue: 0.090)
-    static let lime = Color(red: 0.84, green: 0.98, blue: 0.54)
-    static let panel = Color(red: 0.096, green: 0.104, blue: 0.153)
-    static let text = Color(red: 0.97, green: 0.96, blue: 0.93)
-    static let muted = Color(red: 0.68, green: 0.70, blue: 0.76)
-    static let line = Color.white.opacity(0.095)
+    static let background = Color(red: 0.957, green: 0.965, blue: 0.993)
+    static let primary = Color(red: 0.28, green: 0.23, blue: 0.70)
+    static let panel = Color.white
+    static let text = Color(red: 0.12, green: 0.14, blue: 0.23)
+    static let muted = Color(red: 0.34, green: 0.38, blue: 0.48)
+    static let line = Color(red: 0.13, green: 0.17, blue: 0.34).opacity(0.11)
 
     static func accent(_ key: String) -> Color {
         switch key {
-        case "movie", "theatrical_release": Color(red: 1, green: 0.72, blue: 0.55)
-        case "ott", "ott_season_premiere": Color(red: 0.78, green: 0.71, blue: 1)
-        case "epl", "epl_match": Color(red: 0.53, green: 0.82, blue: 0.99)
-        default: lime
+        case "movie", "theatrical_release": Color(red: 0.59, green: 0.23, blue: 0.09)
+        case "ott", "ott_season_premiere": primary
+        case "game", "game_release": Color(red: 0.04, green: 0.41, blue: 0.34)
+        case "epl", "epl_match": Color(red: 0.10, green: 0.32, blue: 0.64)
+        default: primary
         }
     }
 
@@ -29,8 +30,8 @@ private enum DiscoveryPalette {
 }
 
 struct ContentView: View {
-    private let ink = DiscoveryPalette.ink
-    private let lime = DiscoveryPalette.lime
+    private let backdrop = DiscoveryPalette.background
+    private let primary = DiscoveryPalette.primary
     private let panel = DiscoveryPalette.panel
 
     @Environment(\.scenePhase) private var scenePhase
@@ -60,9 +61,9 @@ struct ContentView: View {
     @State private var dayError: String?
     @State private var selection: DetailSelection?
     private struct DetailSelection: Identifiable {
-        let event: ReleaseEvent
+        let card: ReleaseCard
         let filters: PublicFilters
-        var id: String { event.id }
+        var id: String { card.id }
     }
     private let api = PublicAPI()
     private let options = [("movie", "영화"), ("ott", "OTT"), ("game", "게임"), ("epl", "EPL")]
@@ -87,7 +88,7 @@ struct ContentView: View {
     }
     private var selectionKey: String {
         guard let filters else { return monthKey + ":options-unavailable" }
-        return ([monthKey, filters.country, filters.timeZone] + filters.categories + ["services"] + filters.services + ["devices"] + filters.devices).joined(separator: ":")
+        return ([monthKey, historyStart, filters.country, filters.timeZone] + filters.categories + ["services"] + filters.services + ["devices"] + filters.devices).joined(separator: ":")
     }
     private var daySelectionKey: String {
         [selectedDate ?? "", selectionKey, calendar?.month ?? "", calendar?.catalogRevision ?? ""].joined(separator: ":")
@@ -114,21 +115,21 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
             }
             .background {
-                ink.overlay(alignment: .topTrailing) {
+                backdrop.overlay(alignment: .topTrailing) {
                     RadialGradient(
-                        colors: [Color(red: 0.21, green: 0.17, blue: 0.38), ink],
+                        colors: [Color(red: 0.88, green: 0.88, blue: 0.99), backdrop],
                         center: .topTrailing, startRadius: 0, endRadius: 370
                     )
                 }
                 .ignoresSafeArea()
             }
             .foregroundStyle(DiscoveryPalette.text)
-            .tint(lime)
+            .tint(primary)
             .toolbar(.hidden, for: .navigationBar)
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(.light)
             .sheet(item: $selection) { selected in
                 NavigationStack {
-                    EventDetailView(event: selected.event, filters: selected.filters, api: api)
+                    ReleaseCardDetail(card: selected.card, filters: selected.filters, api: api)
                 }
             }
             .sheet(isPresented: $showingFilters) { filterSheet }
@@ -176,9 +177,9 @@ struct ContentView: View {
             HStack(spacing: 9) {
                 Image(systemName: "arrow.up.right")
                     .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(ink)
+                    .foregroundStyle(.white)
                     .frame(width: 32, height: 32)
-                    .background(lime, in: RoundedRectangle(cornerRadius: 10))
+                    .background(primary, in: RoundedRectangle(cornerRadius: 10))
                     .accessibilityHidden(true)
                 Text("고디어")
                     .font(.system(.title, design: .rounded, weight: .black))
@@ -202,7 +203,7 @@ struct ContentView: View {
         Image(systemName: symbol)
             .font(.system(size: 17, weight: .semibold))
             .frame(width: 44, height: 44)
-            .background(.white.opacity(0.07), in: Circle())
+            .background(panel.opacity(0.84), in: Circle())
             .overlay(Circle().strokeBorder(DiscoveryPalette.line))
     }
 
@@ -248,9 +249,9 @@ struct ContentView: View {
                     Button { storedServices = "" } label: {
                         Image(systemName: "xmark")
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(lime)
+                            .foregroundStyle(primary)
                             .frame(width: 44, height: 44)
-                            .background(lime.opacity(0.1), in: Circle())
+                            .background(primary.opacity(0.1), in: Circle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("OTT 필터 초기화")
@@ -490,11 +491,26 @@ struct ContentView: View {
         catch { if !Task.isCancelled { optionsError = error.localizedDescription } }
     }
 
-    private var todaySelection: (date: String, month: Date) {
-        var displayCalendar = CalendarDay.iso
+    private var displayCalendar: Calendar {
+        var calendar = CalendarDay.iso
         if let timeZone = TimeZone(identifier: filters?.timeZone ?? storedTimeZone) {
-            displayCalendar.timeZone = timeZone
+            calendar.timeZone = timeZone
         }
+        return calendar
+    }
+
+    private var historyStart: String {
+        let calendar = displayCalendar
+        let cutoff = calendar.date(byAdding: .month, value: -1, to: .now)!
+        let parts = calendar.dateComponents([.year, .month, .day], from: cutoff)
+        return max("2026-10-01", String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!))
+    }
+
+    private var canMoveToPreviousMonth: Bool {
+        monthKey > String(historyStart.prefix(7))
+    }
+
+    private var todaySelection: (date: String, month: Date) {
         let parts = displayCalendar.dateComponents([.year, .month, .day], from: .now)
         let date = String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day!)
         let monthStart = CalendarDay.iso.date(from: DateComponents(year: parts.year, month: parts.month))!
@@ -534,7 +550,7 @@ struct ContentView: View {
         .background {
             RoundedRectangle(cornerRadius: 25)
                 .fill(LinearGradient(
-                    colors: [Color(red: 0.139, green: 0.132, blue: 0.220), panel],
+                    colors: [Color(red: 0.94, green: 0.94, blue: 1), panel],
                     startPoint: .topLeading, endPoint: .bottomTrailing
                 ))
         }
@@ -567,10 +583,12 @@ struct ContentView: View {
             .fixedSize()
             .padding(.horizontal, 12)
             .frame(minHeight: 44)
-            .foregroundStyle(lime)
-            .background(lime.opacity(0.1), in: Capsule())
+            .foregroundStyle(primary)
+            .background(primary.opacity(0.1), in: Capsule())
             Button { moveMonth(-1) } label: { monthArrow("chevron.left") }
                 .accessibilityLabel("이전 달")
+                .disabled(!canMoveToPreviousMonth)
+                .opacity(canMoveToPreviousMonth ? 1 : 0.35)
             Button { moveMonth(1) } label: { monthArrow("chevron.right") }
                 .accessibilityLabel("다음 달")
         }
@@ -589,6 +607,7 @@ struct ContentView: View {
         let count = CalendarDay.iso.range(of: .day, in: .month, for: month)!.count
         let columns = Array(repeating: GridItem(.flexible(), spacing: 1), count: 7)
         let today = todaySelection.date
+        let firstDay = historyStart
         return VStack(spacing: 5) {
             LazyVGrid(columns: columns, spacing: 3) {
                 ForEach(Array(["일", "월", "화", "수", "목", "금", "토"].enumerated()), id: \.offset) { index, label in
@@ -611,24 +630,25 @@ struct ContentView: View {
                                     .font(.system(.subheadline, design: .rounded, weight: .bold).monospacedDigit())
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.65)
-                                Text(total > 99 ? "99+" : "\(total)")
-                                    .font(.system(.caption2, design: .monospaced, weight: .semibold))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.65)
-                                    .foregroundStyle(selected ? ink.opacity(0.72) : DiscoveryPalette.muted)
+                                Circle()
+                                    .fill(selected ? .white : primary)
+                                    .frame(width: 4, height: 4)
                                     .opacity(total > 0 ? 1 : 0)
+                                    .accessibilityHidden(true)
                             }
                             .padding(.vertical, 3)
                             .frame(maxWidth: .infinity, minHeight: 44)
-                            .foregroundStyle(selected ? ink : DiscoveryPalette.text)
-                            .background(selected ? lime : (total > 0 ? .white.opacity(0.035) : .clear),
+                            .foregroundStyle(selected ? .white : DiscoveryPalette.text)
+                            .background(selected ? primary : (total > 0 ? primary.opacity(0.055) : .clear),
                                         in: RoundedRectangle(cornerRadius: 10))
                             .overlay(RoundedRectangle(cornerRadius: 10)
-                                .strokeBorder(date == today && !selected ? lime : .clear))
+                                .strokeBorder(date == today && !selected ? primary : .clear))
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("\(date), \(total)개 일정\(date == today ? ", 오늘" : "")")
+                        .disabled(date < firstDay)
+                        .opacity(date < firstDay ? 0.34 : 1)
+                        .accessibilityLabel("\(date)\(date < firstDay ? ", 조회 범위 이전" : total > 0 ? ", 일정 있음" : ", 일정 없음")\(date == today ? ", 오늘" : "")")
                         .accessibilityAddTraits(selected ? [.isSelected] : [])
                     }
                 }
@@ -638,7 +658,7 @@ struct ContentView: View {
 
     private func selectDay(_ date: String) {
         shouldSelectToday = false
-        guard date != selectedDate else { return }
+        guard date >= historyStart, date != selectedDate else { return }
         selectedDate = date
         events = days[date]?.previews ?? []
         dayError = nil
@@ -646,26 +666,27 @@ struct ContentView: View {
     }
 
     private func dayList(_ date: String) -> some View {
-        LazyVStack(alignment: .leading, spacing: 12) {
+        let cards = ReleaseCard.group(events)
+        return LazyVStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(dateLabel(date))
                     .font(.system(.title2, design: .rounded, weight: .heavy))
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 4)
-                Text("\(days[date]?.total ?? 0)개 일정")
+                Text(loadingDay || dayError != nil ? "일정" : "\(cards.count)개 일정")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(lime)
+                    .foregroundStyle(primary)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
-                    .background(lime.opacity(0.12), in: Capsule())
+                    .background(primary.opacity(0.12), in: Capsule())
             }
             .padding(.top, 5)
             if loadingDay {
                 HStack(spacing: 8) {
-                    ProgressView().tint(lime)
+                    ProgressView().tint(primary)
                     Text(events.isEmpty ? "일정을 불러오는 중" : "전체 일정 확인 중 · 미리보기 표시")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.68))
+                        .foregroundStyle(DiscoveryPalette.muted)
                 }
                 .padding(.vertical, 7)
             }
@@ -678,10 +699,11 @@ struct ContentView: View {
                     description: Text("다른 날짜를 선택하거나 분야·플랫폼 필터를 조정해 보세요."))
                     .frame(maxWidth: .infinity)
             }
-            ForEach(events) { item in
+            ForEach(cards) { card in
+                let item = card.event
                 HStack(spacing: 8) {
                     Button {
-                        if let filters { selection = DetailSelection(event: item, filters: filters) }
+                        if let filters { selection = DetailSelection(card: card, filters: filters) }
                     } label: {
                         HStack(alignment: .top, spacing: 12) {
                             EventPosterThumbnail(contentId: item.contentId, kind: item.kind, api: api)
@@ -699,7 +721,7 @@ struct ContentView: View {
                                 }
                                 Text(item.title)
                                     .font(.system(.body, design: .rounded, weight: .bold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(DiscoveryPalette.text)
                                     .lineLimit(2)
                                     .multilineTextAlignment(.leading)
                                 if item.kind == "ott_season_premiere" {
@@ -710,23 +732,24 @@ struct ContentView: View {
                                         }
                                     }
                                 }
-                                if !item.devices.isEmpty {
+                                if !card.devices.isEmpty {
                                     HStack(spacing: 6) {
-                                        ForEach(item.devices, id: \.self) { device in
+                                        ForEach(card.devices, id: \.self) { device in
                                             PlatformIcon(key: device, size: 22)
                                                 .accessibilityLabel(gameDeviceLabel(device))
                                         }
                                     }
                                 }
-                                Text(item.time.description)
+                                Text(item.releaseMarket == "WORLD" && item.kind == "game_release"
+                                     ? "글로벌 · \(item.time.description)" : item.time.description)
                                     .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.55))
+                                    .foregroundStyle(DiscoveryPalette.muted)
                                     .lineLimit(2)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             Image(systemName: "chevron.right")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white.opacity(0.42))
+                                .foregroundStyle(DiscoveryPalette.muted)
                                 .padding(.top, 4)
                                 .accessibilityHidden(true)
                         }
@@ -766,8 +789,8 @@ struct ContentView: View {
     }
 
     private func moveMonth(_ offset: Int) {
-        guard let next = CalendarDay.iso.date(byAdding: .month, value: offset, to: month),
-              next >= CalendarDay.iso.date(from: DateComponents(year: 2026, month: 1, day: 1))! else { return }
+        guard offset >= 0 || canMoveToPreviousMonth,
+              let next = CalendarDay.iso.date(byAdding: .month, value: offset, to: month) else { return }
         shouldSelectToday = false
         month = next
         selectedDate = nil
@@ -875,6 +898,44 @@ private func ottName(_ service: String) -> String {
     }
 }
 
+private struct ReleaseCardDetail: View {
+    let card: ReleaseCard
+    let filters: PublicFilters
+    let api: PublicAPI
+    @State private var selectedID: String?
+
+    var body: some View {
+        let active = card.variants.first { $0.id == selectedID } ?? card.event
+        EventDetailView(event: active, filters: filters, api: api)
+            .id(active.id)
+            .toolbar {
+                if card.variants.count > 1 {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Menu {
+                            Picker("플랫폼 일정", selection: Binding(
+                                get: { active.id },
+                                set: { selectedID = $0 }
+                            )) {
+                                ForEach(Array(card.variants.enumerated()), id: \.element.id) { offset, variant in
+                                    Text(variantLabel(variant, index: offset)).tag(variant.id)
+                                }
+                            }
+                        } label: {
+                            Text("플랫폼")
+                        }
+                    }
+                }
+            }
+    }
+
+    private func variantLabel(_ event: ReleaseEvent, index: Int) -> String {
+        let label = event.devices.map(gameDeviceLabel).joined(separator: ", ")
+        if label.isEmpty { return "일정 \(index + 1)" }
+        return card.variants.filter { $0.devices == event.devices }.count > 1
+            ? "\(label) · 일정 \(index + 1)" : label
+    }
+}
+
 private struct EventDetailView: View {
     let event: ReleaseEvent
     let filters: PublicFilters
@@ -927,12 +988,12 @@ private struct EventDetailView: View {
             .padding(.bottom, 28)
             .frame(maxWidth: .infinity)
         }
-        .background(DiscoveryPalette.ink.ignoresSafeArea())
+        .background(DiscoveryPalette.background.ignoresSafeArea())
         .foregroundStyle(DiscoveryPalette.text)
         .tint(accent)
         .navigationTitle("일정 상세")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(DiscoveryPalette.ink, for: .navigationBar)
+        .toolbarBackground(DiscoveryPalette.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("닫기") { dismiss() } } }
         .task(id: retryCount) {
@@ -1012,7 +1073,7 @@ private struct EventDetailView: View {
             )
             .frame(width: 137, height: 205)
             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.19)))
-            .shadow(color: .black.opacity(0.5), radius: 12, y: 9)
+            .shadow(color: accent.opacity(0.24), radius: 14, y: 8)
             .padding(.vertical, 17)
         }
         .frame(height: 239)
@@ -1056,7 +1117,8 @@ private struct EventDetailView: View {
     private var schedule: some View {
         detailSection("공개 정보", icon: "info.circle") {
             if let market = displayedEvent.releaseMarket {
-                detailRow("공개 지역", value: Locale(identifier: "ko_KR").localizedString(forRegionCode: market) ?? market)
+                detailRow("공개 지역", value: market == "WORLD" ? "글로벌" :
+                    (Locale(identifier: "ko_KR").localizedString(forRegionCode: market) ?? market))
             }
             if let country = displayedEvent.venueCountry {
                 detailRow("개최국", value: Locale(identifier: "ko_KR").localizedString(forRegionCode: country) ?? country)
@@ -1213,7 +1275,7 @@ private struct PosterArtwork: View {
     var lookupFailed = false
     var imageLabel = ""
     var symbol = "photo"
-    var accent = DiscoveryPalette.lime
+    var accent = DiscoveryPalette.primary
 
     private var posterURL: URL? {
         guard let urlString, let url = URL(string: urlString),
@@ -1252,7 +1314,7 @@ private struct PosterArtwork: View {
         }
         .background {
             LinearGradient(
-                colors: [accent.opacity(0.16), DiscoveryPalette.ink],
+                colors: [accent.opacity(0.16), DiscoveryPalette.background],
                 startPoint: .topLeading, endPoint: .bottomTrailing
             )
         }
@@ -1315,7 +1377,7 @@ private struct PlatformIcon: View {
             }
         }
         .frame(width: size, height: size)
-        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: size * 0.25))
+        .background(DiscoveryPalette.background, in: RoundedRectangle(cornerRadius: size * 0.25))
         .clipShape(RoundedRectangle(cornerRadius: size * 0.25))
     }
 
@@ -1323,6 +1385,6 @@ private struct PlatformIcon: View {
         Image(systemName: "play.square.fill")
             .resizable()
             .scaledToFit()
-            .foregroundStyle(.white.opacity(0.65))
+            .foregroundStyle(DiscoveryPalette.muted)
     }
 }
