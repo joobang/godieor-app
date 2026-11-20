@@ -115,7 +115,8 @@ struct ReleaseCard: Identifiable {
         let available = Set(variants.flatMap(\.devices))
         return GamePlatform.supported.filter(available.contains)
     }
-    var isGlobal: Bool { variants.contains { $0.releaseMarket == "WORLD" } }
+    var markets: Set<String> { Set(variants.compactMap(\.releaseMarket)) }
+    var commonMarket: String? { markets.count == 1 ? markets.first : nil }
 
     static func group(_ events: [ReleaseEvent]) -> [Self] {
         var cards: [Self] = []
