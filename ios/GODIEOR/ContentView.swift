@@ -661,6 +661,12 @@ struct ContentView: View {
         loadingDay = true
     }
 
+    private func gameCardTime(_ card: ReleaseCard) -> String {
+        let event = card.event
+        guard event.kind == "game_release", let market = card.commonMarket else { return event.time.description }
+        return "\(gameMarketLabel(market)) · \(event.time.description)"
+    }
+
     private func dayList(_ date: String) -> some View {
         let cards = ReleaseCard.group(events)
         let rowLayout = typeSize.isAccessibilitySize
@@ -741,8 +747,7 @@ struct ContentView: View {
                                         }
                                     }
                                 }
-                                Text(card.isGlobal && item.kind == "game_release"
-                                     ? "글로벌 · \(item.time.description)" : item.time.description)
+                                Text(gameCardTime(card))
                                     .font(.caption)
                                     .foregroundStyle(DiscoveryPalette.muted)
                                     .lineLimit(2)
@@ -910,7 +915,7 @@ private struct ReleaseCardDetail: View {
 
     var body: some View {
         let active = card.variants.first { $0.id == selectedID } ?? card.event
-        EventDetailView(event: active, filters: filters, api: api)
+        EventDetailView(event: active, filters: filters, api: api, cardDevices: card.devices)
             .id(active.id)
             .toolbar {
                 if card.variants.count > 1 {
@@ -935,7 +940,8 @@ private struct ReleaseCardDetail: View {
     private func variantLabel(_ event: ReleaseEvent, index: Int) -> String {
         let label = event.devices.map(gameDeviceLabel).joined(separator: ", ")
         if label.isEmpty { return "일정 \(index + 1)" }
-        guard card.variants.filter({ $0.devices == event.devices }).count > 1 else { return label }
+        let sharesDevice = card.variants.filter { $0.devices == event.devices }.count > 1
+        guard card.markets.count > 1 || sharesDevice else { return label }
         let market = gameMarketLabel(event.releaseMarket)
         let sameRegion = card.variants.filter { $0.devices == event.devices && $0.releaseMarket == event.releaseMarket }
         return sameRegion.count > 1 ? "\(label) · \(market) · \(index + 1)" : "\(label) · \(market)"
@@ -946,6 +952,7 @@ private struct EventDetailView: View {
     let event: ReleaseEvent
     let filters: PublicFilters
     let api: PublicAPI
+    var cardDevices: [String] = []
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var detail: ReleaseDetail?
@@ -1057,6 +1064,16 @@ private struct EventDetailView: View {
                 .tracking(-1.1)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
+            if !cardDevices.isEmpty {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 6) {
+                        ForEach(cardDevices, id: \.self) { GamePlatformIcon(device: $0) }
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(cardDevices, id: \.self) { GamePlatformIcon(device: $0) }
+                    }
+                }
+            }
             if displayedEvent.dataOrigin == "fixture" {
                 Text("가상 데이터")
                     .font(.caption.weight(.semibold))

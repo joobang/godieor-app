@@ -27,7 +27,9 @@ struct ReleaseCardChecks {
         precondition(cards.map(\.id) == ["ott", "switch", "later", "cancelled", "same-name", "fixture"])
         precondition(cards[1].variants.map(\.id) == ["switch", "xbox", "kr"])
         precondition(Set(cards[1].devices) == ["playstation", "switch", "xbox"])
-        precondition(cards[1].isGlobal)
+        precondition(cards[1].markets == ["WORLD", "KR"])
+        precondition(cards[1].commonMarket == nil)
+        precondition(cards[2].commonMarket == "WORLD")
         print("Release card grouping checks passed")
     }
 }
