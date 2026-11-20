@@ -207,6 +207,7 @@ final class AccountState: ObservableObject {
     @Published private(set) var settings: AccountSettings?
     @Published private(set) var favoriteEventIDs = Set<String>()
     @Published private(set) var favoriteContentIDs = Set<String>()
+    @Published private(set) var favoritesReady = false
     @Published private(set) var busy = false
     @Published private(set) var isSyncing = false
     @Published private(set) var lastSyncedAt: Date?
@@ -310,6 +311,7 @@ final class AccountState: ObservableObject {
             favoriteMutationRevision += 1
             pendingFavorites.removeAll()
             settings = nil
+            favoritesReady = false
             favoriteEventIDs.removeAll()
             favoriteContentIDs.removeAll()
             isSyncing = false
@@ -356,6 +358,7 @@ final class AccountState: ObservableObject {
             if favoritesUnchanged {
                 favoriteEventIDs = Set(allFavorites.filter { $0.targetType == "event" }.map(\.targetId))
                 favoriteContentIDs = Set(allFavorites.filter { $0.targetType == "content" }.map(\.targetId))
+                favoritesReady = true
             }
             isSyncing = false
             if settingsUnchanged && favoritesUnchanged { lastSyncedAt = Date() }
@@ -424,7 +427,7 @@ final class AccountState: ObservableObject {
     }
 
     func toggleFavorite(type: String, id: String) async {
-        guard user != nil, let activeToken = token, type == "event" || type == "content" else { return }
+        guard user != nil, favoritesReady, let activeToken = token, type == "event" || type == "content" else { return }
         let pendingKey = "\(type):\(id)"
         guard pendingFavorites[pendingKey] == nil else { return }
         let operationID = UUID()
@@ -502,6 +505,7 @@ final class AccountState: ObservableObject {
         isSyncing = false
         lastSyncedAt = nil
         syncFailed = false
+        favoritesReady = false
         favoriteEventIDs.removeAll()
         favoriteContentIDs.removeAll()
     }
