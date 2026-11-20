@@ -95,11 +95,14 @@ struct ReleaseTime: Decodable, Hashable {
     }
 }
 
+enum GamePlatform {
+    static let supported = ["playstation", "xbox", "switch", "ios", "android"]
+}
+
 /// Platform variants retain their IDs and can be opened individually.
 struct ReleaseCard: Identifiable {
     private struct GameKey: Hashable {
         let contentId: String
-        let market: String?
         let time: ReleaseTime
         let status: String
         let origin: String
@@ -108,17 +111,26 @@ struct ReleaseCard: Identifiable {
     private(set) var variants: [ReleaseEvent]
     var event: ReleaseEvent { variants[0] }
     var id: String { event.id }
-    var devices: [String] { Set(variants.flatMap(\.devices)).sorted() }
+    var devices: [String] {
+        let available = Set(variants.flatMap(\.devices))
+        return GamePlatform.supported.filter(available.contains)
+    }
+    var isGlobal: Bool { variants.contains { $0.releaseMarket == "WORLD" } }
 
     static func group(_ events: [ReleaseEvent]) -> [Self] {
         var cards: [Self] = []
         var indices: [GameKey: Int] = [:]
         for event in events {
-            guard event.kind == "game_release", let contentId = event.contentId else {
+            guard event.kind == "game_release" else {
                 cards.append(Self(variants: [event]))
                 continue
             }
-            let key = GameKey(contentId: contentId, market: event.releaseMarket, time: event.time,
+            guard event.devices.contains(where: GamePlatform.supported.contains) else { continue }
+            guard let contentId = event.contentId, event.time.type != "unknown" else {
+                cards.append(Self(variants: [event]))
+                continue
+            }
+            let key = GameKey(contentId: contentId, time: event.time,
                               status: event.status, origin: event.dataOrigin)
             if let index = indices[key] {
                 cards[index].variants.append(event)
