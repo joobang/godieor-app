@@ -1,20 +1,28 @@
 import SwiftUI
 
 private enum DiscoveryPalette {
-    static let background = Color(red: 0.957, green: 0.965, blue: 0.993)
-    static let primary = Color(red: 0.28, green: 0.23, blue: 0.70)
+    static let background = Color(red: 1, green: 0.986, blue: 0.956)
+    static let primary = Color(red: 0.70, green: 0.24, blue: 0.13)
     static let panel = Color.white
-    static let text = Color(red: 0.12, green: 0.14, blue: 0.23)
-    static let muted = Color(red: 0.34, green: 0.38, blue: 0.48)
-    static let line = Color(red: 0.13, green: 0.17, blue: 0.34).opacity(0.11)
+    static let text = Color(red: 0.15, green: 0.12, blue: 0.10)
+    static let muted = Color(red: 0.37, green: 0.32, blue: 0.28)
+    static let line = Color(red: 0.26, green: 0.18, blue: 0.12).opacity(0.13)
 
     static func accent(_ key: String) -> Color {
         switch key {
-        case "movie", "theatrical_release": Color(red: 0.59, green: 0.23, blue: 0.09)
-        case "ott", "ott_season_premiere": primary
-        case "game", "game_release": Color(red: 0.04, green: 0.41, blue: 0.34)
-        case "epl", "epl_match": Color(red: 0.10, green: 0.32, blue: 0.64)
+        case "ott", "ott_season_premiere": Color(red: 0.05, green: 0.36, blue: 0.26)
+        case "game", "game_release": Color(red: 0.41, green: 0.31, blue: 0.06)
+        case "epl", "epl_match": Color(red: 0.14, green: 0.31, blue: 0.52)
         default: primary
+        }
+    }
+
+    static func wash(_ key: String) -> Color {
+        switch key {
+        case "ott", "ott_season_premiere": Color(red: 0.81, green: 0.96, blue: 0.85)
+        case "game", "game_release": Color(red: 1, green: 0.93, blue: 0.65)
+        case "epl", "epl_match": Color(red: 0.85, green: 0.91, blue: 1)
+        default: Color(red: 1, green: 0.86, blue: 0.76)
         }
     }
 
@@ -35,6 +43,7 @@ struct ContentView: View {
     private let panel = DiscoveryPalette.panel
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var typeSize
     @StateObject private var account = AccountState()
     @State private var month = CalendarDay.iso.date(from: CalendarDay.iso.dateComponents([.year, .month], from: .now))!
     @State private var selectedDate: String?
@@ -114,15 +123,7 @@ struct ContentView: View {
                 .padding(.bottom, 36)
                 .frame(maxWidth: .infinity)
             }
-            .background {
-                backdrop.overlay(alignment: .topTrailing) {
-                    RadialGradient(
-                        colors: [Color(red: 0.88, green: 0.88, blue: 0.99), backdrop],
-                        center: .topTrailing, startRadius: 0, endRadius: 370
-                    )
-                }
-                .ignoresSafeArea()
-            }
+            .background(backdrop.ignoresSafeArea())
             .foregroundStyle(DiscoveryPalette.text)
             .tint(primary)
             .toolbar(.hidden, for: .navigationBar)
@@ -176,13 +177,14 @@ struct ContentView: View {
         HStack(spacing: 8) {
             HStack(spacing: 9) {
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: 18, weight: .black))
                     .foregroundStyle(.white)
-                    .frame(width: 32, height: 32)
-                    .background(primary, in: RoundedRectangle(cornerRadius: 10))
+                    .frame(width: 38, height: 38)
+                    .background(primary, in: Circle())
                     .accessibilityHidden(true)
                 Text("고디어")
                     .font(.system(.title, design: .rounded, weight: .black))
+                    .tracking(-0.8)
                     .accessibilityAddTraits(.isHeader)
             }
             Spacer(minLength: 0)
@@ -225,15 +227,28 @@ struct ContentView: View {
                     if !next.insert(option.0).inserted { next.remove(option.0) }
                     storedCategories = options.map(\.0).filter { next.contains($0) }.joined(separator: ",")
                 } label: {
-                    Label(option.1, systemImage: DiscoveryPalette.symbol(option.0))
-                        .font(.subheadline.weight(.semibold))
-                        .fixedSize()
-                        .foregroundStyle(selected ? accent : DiscoveryPalette.muted)
-                        .padding(.horizontal, 10)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .background(selected ? accent.opacity(0.13) : panel, in: RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(selected ? accent.opacity(0.35) : DiscoveryPalette.line))
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 3) {
+                            Image(systemName: DiscoveryPalette.symbol(option.0))
+                                .font(.headline.weight(.semibold))
+                            Spacer(minLength: 3)
+                            if selected {
+                                Image(systemName: "checkmark")
+                                    .font(.caption2.weight(.black))
+                            }
+                        }
+                        Text(option.1)
+                            .font(.subheadline.weight(.heavy))
+                            .fixedSize()
+                    }
+                    .foregroundStyle(selected ? accent : DiscoveryPalette.muted)
+                    .padding(10)
+                    .frame(minWidth: 64, minHeight: 66, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(selected ? DiscoveryPalette.wash(option.0) : panel,
+                                in: RoundedRectangle(cornerRadius: 18))
+                    .overlay(RoundedRectangle(cornerRadius: 18)
+                        .strokeBorder(selected ? .clear : DiscoveryPalette.line))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("\(option.1) \(selected ? "선택됨" : "선택 안 됨")")
@@ -312,7 +327,7 @@ struct ContentView: View {
                         Text("계정 설정·찜 동기화 중")
                     } else if account.syncFailed {
                         Label("최근 동기화 실패", systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(DiscoveryPalette.primary)
                     } else if let lastSyncedAt = account.lastSyncedAt {
                         Text("마지막 서버 동기화: \(lastSyncedAt.formatted(date: .abbreviated, time: .shortened))")
                     } else {
@@ -363,6 +378,13 @@ struct ContentView: View {
             Text(verbatim: "This product uses the TMDB API but is not endorsed or certified by TMDB.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+            if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+               let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String {
+                Text("버전 \(version) (\(build))")
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(DiscoveryPalette.muted)
+                    .padding(.top, 8)
+            }
         }
     }
 
@@ -406,13 +428,13 @@ struct ContentView: View {
             }
             if showingCachedCalendar {
                 Label("이전에 조회한 달력을 표시해요. 최신 일정이 아닐 수 있어요.", systemImage: "clock.arrow.circlepath")
-                    .font(.caption).foregroundStyle(.orange)
+                    .font(.caption).foregroundStyle(DiscoveryPalette.primary)
             }
             calendarPanel
             if let calendar {
                 if calendar.freshness.contains(where: { $0.dataOrigin == "fixture" }) {
                     Label("가상 일정이 포함되어 있어요", systemImage: "exclamationmark.circle")
-                        .font(.caption).foregroundStyle(.orange)
+                        .font(.caption).foregroundStyle(DiscoveryPalette.primary)
                 }
                 if calendar.freshness.contains(where: { $0.coverage != "available" }) {
                     Text("제공처 일정이 일부만 수집되었을 수 있어요.").font(.caption).foregroundStyle(.secondary)
@@ -518,43 +540,43 @@ struct ContentView: View {
     }
 
     private var calendarPanel: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .center) {
-                    monthHeading
-                    Spacer(minLength: 8)
-                    monthControls
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 7) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .center) {
+                        monthHeading
+                        Spacer(minLength: 8)
+                        monthControls
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        monthHeading
+                        monthControls
+                    }
                 }
-                VStack(alignment: .leading, spacing: 8) {
-                    monthHeading
-                    monthControls
+                if let filters {
+                    Label("\(filters.country) · \(filters.timeZone)", systemImage: "globe.asia.australia")
+                        .font(.caption)
+                        .foregroundStyle(DiscoveryPalette.muted)
                 }
             }
-            .padding(.horizontal, 14)
-            if let filters {
-                Label("\(filters.country) · \(filters.timeZone)", systemImage: "globe.asia.australia")
-                    .font(.caption2)
-                    .foregroundStyle(DiscoveryPalette.muted)
-                    .padding(.horizontal, 14)
-            }
-            Divider().overlay(DiscoveryPalette.line).padding(.horizontal, 9)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(DiscoveryPalette.wash("movie"))
+
             if loading && calendar == nil {
                 ProgressView("달력 불러오는 중")
                     .frame(maxWidth: .infinity, minHeight: 185)
             } else if calendar?.month == monthKey {
                 monthGrid
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 13)
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 14)
-        .background {
-            RoundedRectangle(cornerRadius: 25)
-                .fill(LinearGradient(
-                    colors: [Color(red: 0.94, green: 0.94, blue: 1), panel],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ))
-        }
+        .background(panel)
+        .clipShape(RoundedRectangle(cornerRadius: 25))
         .overlay(RoundedRectangle(cornerRadius: 25).strokeBorder(DiscoveryPalette.line))
+        .shadow(color: DiscoveryPalette.text.opacity(0.055), radius: 16, y: 7)
     }
 
     private var monthHeading: some View {
@@ -564,8 +586,8 @@ struct ContentView: View {
                 .font(.caption.monospacedDigit().weight(.semibold))
                 .foregroundStyle(DiscoveryPalette.muted)
             Text("\(parts.month!)월")
-                .font(.system(.largeTitle, design: .rounded, weight: .heavy))
-                .tracking(-1)
+                .font(.system(.largeTitle, design: .rounded, weight: .black))
+                .tracking(-1.4)
         }
         .fixedSize()
         .accessibilityElement(children: .combine)
@@ -584,7 +606,7 @@ struct ContentView: View {
             .padding(.horizontal, 12)
             .frame(minHeight: 44)
             .foregroundStyle(primary)
-            .background(primary.opacity(0.1), in: Capsule())
+            .background(panel.opacity(0.85), in: Capsule())
             Button { moveMonth(-1) } label: { monthArrow("chevron.left") }
                 .accessibilityLabel("이전 달")
                 .disabled(!canMoveToPreviousMonth)
@@ -639,9 +661,8 @@ struct ContentView: View {
                             .padding(.vertical, 3)
                             .frame(maxWidth: .infinity, minHeight: 44)
                             .foregroundStyle(selected ? .white : DiscoveryPalette.text)
-                            .background(selected ? primary : (total > 0 ? primary.opacity(0.055) : .clear),
-                                        in: RoundedRectangle(cornerRadius: 10))
-                            .overlay(RoundedRectangle(cornerRadius: 10)
+                            .background(selected ? primary : .clear, in: RoundedRectangle(cornerRadius: 15))
+                            .overlay(RoundedRectangle(cornerRadius: 15)
                                 .strokeBorder(date == today && !selected ? primary : .clear))
                             .contentShape(Rectangle())
                         }
@@ -667,10 +688,14 @@ struct ContentView: View {
 
     private func dayList(_ date: String) -> some View {
         let cards = ReleaseCard.group(events)
+        let rowLayout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+            : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
         return LazyVStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(dateLabel(date))
-                    .font(.system(.title2, design: .rounded, weight: .heavy))
+                Text(date == todaySelection.date ? "오늘 일정" : dateLabel(date))
+                    .font(.system(.title, design: .rounded, weight: .black))
+                    .tracking(-0.55)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 4)
                 Text(loadingDay || dayError != nil ? "일정" : "\(cards.count)개 일정")
@@ -705,24 +730,26 @@ struct ContentView: View {
                     Button {
                         if let filters { selection = DetailSelection(card: card, filters: filters) }
                     } label: {
-                        HStack(alignment: .top, spacing: 12) {
-                            EventPosterThumbnail(contentId: item.contentId, kind: item.kind, api: api)
+                        rowLayout {
+                            EventPosterThumbnail(contentId: item.contentId, kind: item.kind, api: api,
+                                                 prominent: card.id == cards.first?.id)
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(item.categoryTitle)
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(DiscoveryPalette.accent(item.kind))
                                     if item.dataOrigin == "fixture" {
-                                        Text("가상").font(.caption).foregroundStyle(.orange)
+                                        Text("가상").font(.caption).foregroundStyle(DiscoveryPalette.primary)
                                     }
                                     if item.status != "scheduled" {
                                         Text(item.statusTitle).font(.caption).foregroundStyle(.red)
                                     }
                                 }
                                 Text(item.title)
-                                    .font(.system(.body, design: .rounded, weight: .bold))
+                                    .font(.system(card.id == cards.first?.id ? .title3 : .body, design: .rounded, weight: .heavy))
                                     .foregroundStyle(DiscoveryPalette.text)
-                                    .lineLimit(2)
+                                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                                    .fixedSize(horizontal: false, vertical: true)
                                     .multilineTextAlignment(.leading)
                                 if item.kind == "ott_season_premiere" {
                                     HStack(spacing: 5) {
@@ -747,16 +774,19 @@ struct ContentView: View {
                                     .lineLimit(2)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            Image(systemName: "chevron.right")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(DiscoveryPalette.muted)
-                                .padding(.top, 4)
-                                .accessibilityHidden(true)
+                            if !typeSize.isAccessibilitySize {
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(DiscoveryPalette.muted)
+                                    .padding(.top, 4)
+                                    .accessibilityHidden(true)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(panel, in: RoundedRectangle(cornerRadius: 16))
-                        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(DiscoveryPalette.line))
+                        .background(card.id == cards.first?.id ? DiscoveryPalette.wash(item.kind) : panel,
+                                    in: RoundedRectangle(cornerRadius: 20))
+                        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(DiscoveryPalette.line))
                         .accessibilityElement(children: .combine)
                     }
                     .buttonStyle(.plain)
@@ -941,6 +971,7 @@ private struct EventDetailView: View {
     let filters: PublicFilters
     let api: PublicAPI
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var detail: ReleaseDetail?
     @State private var detailFailed = false
     @State private var retryCount = 0
@@ -953,7 +984,7 @@ private struct EventDetailView: View {
     private var statusColor: Color {
         switch displayedEvent.status {
         case "cancelled": .red
-        case "postponed": .orange
+        case "postponed": DiscoveryPalette.primary
         default: accent
         }
     }
@@ -1023,63 +1054,51 @@ private struct EventDetailView: View {
     }
 
     private var hero: some View {
-        VStack(alignment: .leading, spacing: 13) {
-            posterStage
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 15))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 14))
+        return VStack(alignment: .leading, spacing: 15) {
+            layout {
+                heroHeading.frame(maxWidth: .infinity, alignment: .leading)
+                poster
+            }
+            Divider().overlay(DiscoveryPalette.line)
+            releaseStrip
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DiscoveryPalette.wash(displayedEvent.kind), in: RoundedRectangle(cornerRadius: 27))
+    }
 
+    private var heroHeading: some View {
+        VStack(alignment: .leading, spacing: 9) {
             Label(displayedEvent.categoryTitle, systemImage: DiscoveryPalette.symbol(displayedEvent.kind))
-                .font(.subheadline.weight(.semibold))
+                .font(.subheadline.weight(.bold))
                 .foregroundStyle(accent)
-                .padding(.top, 4)
             Text(displayedEvent.title)
-                .font(.system(.largeTitle, design: .rounded, weight: .heavy))
-                .tracking(-0.6)
+                .font(.system(.largeTitle, design: .rounded, weight: .black))
+                .tracking(-0.7)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
             if displayedEvent.dataOrigin == "fixture" {
                 Text("가상 데이터")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(DiscoveryPalette.primary)
             }
-            releaseStrip
         }
     }
 
-    private var posterStage: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 22)
-                .fill(LinearGradient(
-                    colors: [accent.opacity(0.33), DiscoveryPalette.panel, accent.opacity(0.24)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ))
-            GeometryReader { space in
-                ForEach(0..<5) { index in
-                    RoundedRectangle(cornerRadius: 44)
-                        .strokeBorder(accent.opacity(0.16), lineWidth: 1)
-                        .frame(width: space.size.width + CGFloat(index) * 35,
-                               height: 140 + CGFloat(index) * 30)
-                        .rotationEffect(.degrees(-32))
-                        .position(x: space.size.width * 0.5, y: space.size.height * 0.51)
-                }
-            }
-            .accessibilityHidden(true)
-
-            PosterArtwork(
-                urlString: content?.posterUrl,
-                isLoading: isContentLoading,
-                lookupFailed: contentFailed,
-                imageLabel: "\(displayedEvent.title) 포스터",
-                symbol: DiscoveryPalette.symbol(displayedEvent.kind),
-                accent: accent
-            )
-            .frame(width: 137, height: 205)
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.19)))
-            .shadow(color: accent.opacity(0.24), radius: 14, y: 8)
-            .padding(.vertical, 17)
-        }
-        .frame(height: 239)
-        .frame(maxWidth: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 22))
-        .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(accent.opacity(0.27)))
+    private var poster: some View {
+        PosterArtwork(
+            urlString: content?.posterUrl,
+            isLoading: isContentLoading,
+            lookupFailed: contentFailed,
+            imageLabel: "\(displayedEvent.title) 포스터",
+            symbol: DiscoveryPalette.symbol(displayedEvent.kind),
+            accent: accent
+        )
+        .frame(width: 109, height: 162)
+        .shadow(color: DiscoveryPalette.text.opacity(0.20), radius: 10, y: 5)
     }
 
     private var releaseStrip: some View {
@@ -1095,9 +1114,7 @@ private struct EventDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(accent.opacity(0.085), in: RoundedRectangle(cornerRadius: 15))
-        .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(accent.opacity(0.23)))
+        .padding(.vertical, 2)
     }
 
     private var releaseDate: some View {
@@ -1244,6 +1261,7 @@ private struct EventPosterThumbnail: View {
     let contentId: String?
     let kind: String
     let api: PublicAPI
+    var prominent = false
     @State private var posterURL: String?
     @State private var isLoading = false
 
@@ -1255,7 +1273,7 @@ private struct EventPosterThumbnail: View {
             symbol: DiscoveryPalette.symbol(kind),
             accent: DiscoveryPalette.accent(kind)
         )
-        .frame(width: 62, height: 88)
+        .frame(width: prominent ? 82 : 58, height: prominent ? 112 : 82)
             .task(id: contentId) {
                 posterURL = nil
                 guard let contentId else { isLoading = false; return }
