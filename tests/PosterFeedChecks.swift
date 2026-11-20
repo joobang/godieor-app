@@ -12,8 +12,8 @@ private final class FeedProtocol: URLProtocol, @unchecked Sendable {
         precondition(query["schedule"] == "dated" && query["limit"] == "100")
         precondition(query["categories"] == "game" && query["timeZone"] == "Asia/Seoul")
         let singleDay = url.host == "calendar.invalid"
-        precondition(query["from"] == (singleDay ? "2027-01-01" : "2026-12-30"))
-        precondition(query["to"] == "2027-01-02")
+        precondition(query["from"] == (singleDay ? "2027-01-01" : "2026-12-31"))
+        precondition(query["to"] == (singleDay ? "2027-01-02" : "2027-01-03"))
         let second = query["cursor"] != nil
         if second {
             precondition(query["cursor"] == "page-2" && query["catalogRevision"] == "fixture-revision")
@@ -32,7 +32,17 @@ private final class FeedProtocol: URLProtocol, @unchecked Sendable {
             "catalogRevision": revision, "items": [event],
             "nextCursor": second || singleDay ? NSNull() as Any : "page-2", "freshness": []
         ]
-        let data = try! JSONSerialization.data(withJSONObject: page)
+        var responsePage = page
+        if second {
+            var tomorrow = event
+            tomorrow["id"] = "tomorrow"
+            tomorrow["time"] = [
+                "type": "instant", "instantUtc": "2027-01-01T15:00:00Z",
+                "displayDate": "2027-01-02", "displayTime": "00:00"
+            ]
+            responsePage["items"] = [event, tomorrow]
+        }
+        let data = try! JSONSerialization.data(withJSONObject: responsePage)
         let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: data)
@@ -44,22 +54,29 @@ private final class FeedProtocol: URLProtocol, @unchecked Sendable {
 
 @main private struct PosterFeedChecks {
     static func main() async throws {
-        precondition(CalendarDay.offset("2027-01-01", by: -2) == "2026-12-30")
-        precondition(CalendarDay.offset("2028-03-01", by: -2) == "2028-02-28")
+        let window = PosterFeedWindow(today: "2027-01-01")
+        precondition(window.chronologicalDates == ["2026-12-31", "2027-01-01", "2027-01-02"])
+        precondition(window.exclusiveEnd == "2027-01-03")
+        precondition(window.chronologicalDates.map { window.label(for: $0) } == ["어제", "오늘", "내일"])
+        let leapWindow = PosterFeedWindow(today: "2028-02-29")
+        precondition(leapWindow.chronologicalDates == ["2028-02-28", "2028-02-29", "2028-03-01"])
+        precondition(leapWindow.exclusiveEnd == "2028-03-02")
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [FeedProtocol.self]
         let session = URLSession(configuration: config)
         let filters = PublicFilters(categories: ["game"], services: [], devices: [], country: "KR", timeZone: "Asia/Seoul")
         let feed = PublicAPI(baseURL: URL(string: "https://feed.invalid/v1"), session: session)
-        let rows = try await feed.events(from: "2026-12-30", to: "2027-01-02", filters: filters)
-        precondition(rows.map(\.id) == ["first", "next"])
-        precondition(rows.compactMap { $0.time.civilDate } == ["2026-12-31", "2027-01-01"])
+        let rows = try await feed.events(from: window.yesterday, to: window.exclusiveEnd, filters: filters)
+        precondition(rows.map(\.id) == ["first", "next", "tomorrow"])
+        precondition(window.cards(from: rows).map(\.id) == ["next", "tomorrow", "first"])
+        precondition(window.cards(from: rows.filter { $0.id != "next" }).map(\.id) == ["tomorrow", "first"])
+        precondition(PosterFeedWindow(today: "2027-01-02").cards(from: rows).map(\.id) == ["tomorrow", "next"])
         let calendar = PublicAPI(baseURL: URL(string: "https://calendar.invalid/v1"), session: session)
         let day = try await calendar.events(date: "2027-01-01", filters: filters, revision: "fixture-revision")
         precondition(day.count == 1)
         let changed = PublicAPI(baseURL: URL(string: "https://changed.invalid/v1"), session: session)
         do {
-            _ = try await changed.events(from: "2026-12-30", to: "2027-01-02", filters: filters)
+            _ = try await changed.events(from: window.yesterday, to: window.exclusiveEnd, filters: filters)
             preconditionFailure("A request must reject a page from a different catalog revision")
         } catch PublicAPIError.catalogChanged {}
         print("Poster feed checks passed: calendar date boundaries, paging, and catalog revision")

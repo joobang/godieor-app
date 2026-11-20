@@ -212,11 +212,10 @@ struct ContentView: View {
     }
 
     private var posterFeed: some View {
-        let today = todaySelection.date
-        let start = CalendarDay.offset(today, by: -2)
+        let window = PosterFeedWindow(today: todaySelection.date)
         return VStack(alignment: .leading, spacing: 13) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("\(dateLabel(start)) – \(dateLabel(today))")
+                Text("\(dateLabel(window.yesterday)) – \(dateLabel(window.tomorrow))")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(DiscoveryPalette.muted)
                 Text("공개 피드")
@@ -240,7 +239,7 @@ struct ContentView: View {
                         LazyHStack(alignment: .top, spacing: 12) {
                             ForEach(feed.cards) { card in
                                 PosterFeedCard(card: card, api: api,
-                                               dateText: feedDate(card.event.time),
+                                               dateText: feedDate(card.event.time, window: window),
                                                saved: isFavorite(card.event),
                                                canSave: account.user == nil || account.favoritesReady || account.syncFailed,
                                                open: { open(card) },
@@ -256,7 +255,9 @@ struct ContentView: View {
                     .scrollTargetBehavior(.viewAligned)
                     .scrollIndicators(.hidden)
                     .accessibilityIdentifier("poster-feed")
-                    feedDateLinks(ending: today)
+                }
+                if feed.error == nil || !feed.cards.isEmpty {
+                    feedDateLinks(window)
                 }
                 if let error = feed.error {
                     feedMessage("공개 일정을 불러오지 못했어요", detail: error, icon: "wifi.exclamationmark")
@@ -278,7 +279,7 @@ struct ContentView: View {
         }
     }
 
-    private func feedDateLinks(ending today: String) -> some View {
+    private func feedDateLinks(_ window: PosterFeedWindow) -> some View {
         let counts = Dictionary(grouping: feed.cards, by: { $0.event.time.civilDate ?? "" }).mapValues(\.count)
         return VStack(alignment: .leading, spacing: 9) {
             Divider()
@@ -286,17 +287,17 @@ struct ContentView: View {
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 7) { feedDateButtons(ending: today, counts: counts) }
-                VStack(alignment: .leading, spacing: 6) { feedDateButtons(ending: today, counts: counts) }
+                HStack(spacing: 7) { feedDateButtons(window, counts: counts) }
+                VStack(alignment: .leading, spacing: 6) { feedDateButtons(window, counts: counts) }
             }
         }
         .padding(.horizontal, 18)
         .padding(.top, 15)
     }
 
-    private func feedDateButtons(ending today: String, counts: [String: Int]) -> some View {
-        ForEach([0, -1, -2], id: \.self) { offset in
-            let date = CalendarDay.offset(today, by: offset)
+    private func feedDateButtons(_ window: PosterFeedWindow, counts: [String: Int]) -> some View {
+        ForEach(window.chronologicalDates.filter { $0 >= historyStart }, id: \.self) { date in
+            let label = window.label(for: date) ?? dateLabel(date)
             Button {
                 let monthParts = date.split(separator: "-").prefix(2).compactMap { Int($0) }
                 guard monthParts.count == 2,
@@ -306,7 +307,7 @@ struct ContentView: View {
                 tab = .calendar
             } label: {
                 HStack(spacing: 4) {
-                    Text(offset == 0 ? "오늘" : dateLabel(date))
+                    Text(label)
                     Text("\(counts[date, default: 0])").foregroundStyle(DiscoveryPalette.muted)
                 }
                 .font(.subheadline.weight(.semibold))
@@ -315,7 +316,7 @@ struct ContentView: View {
                 .frame(minHeight: 44)
                 .background(DiscoveryPalette.surface, in: Capsule())
             }
-            .accessibilityLabel("\(dateLabel(date)) 일정 \(counts[date, default: 0])건")
+            .accessibilityLabel("\(label), \(dateLabel(date)) 일정 \(counts[date, default: 0])건")
             .buttonStyle(.plain)
         }
     }
@@ -324,9 +325,9 @@ struct ContentView: View {
         ContentUnavailableView(title, systemImage: icon, description: Text(detail)).padding(.horizontal, 18)
     }
 
-    private func feedDate(_ time: ReleaseTime) -> String {
+    private func feedDate(_ time: ReleaseTime, window: PosterFeedWindow) -> String {
         guard let day = time.civilDate else { return time.description }
-        let label = day == todaySelection.date ? "오늘" : dateLabel(day)
+        let label = window.label(for: day) ?? dateLabel(day)
         if let clock = time.displayTime { return "\(label) · \(clock)" }
         return label
     }
@@ -334,9 +335,9 @@ struct ContentView: View {
     @MainActor private func loadFeed() async {
         guard let filters, !filters.categories.isEmpty else { feed = FeedState(); return }
         let key = feedKey
-        let today = todaySelection.date
-        let start = max(historyStart, CalendarDay.offset(today, by: -2))
-        let end = CalendarDay.next(today)
+        let window = PosterFeedWindow(today: todaySelection.date)
+        let start = max(historyStart, window.yesterday)
+        let end = window.exclusiveEnd
         let requestID = UUID()
         if feed.key != key { feed = FeedState(key: key) }
         feed.requestID = requestID
@@ -351,8 +352,7 @@ struct ContentView: View {
                 records = try await api.events(from: start, to: end, filters: filters)
             }
             guard !Task.isCancelled, feedKey == key, feed.requestID == requestID else { return }
-            let sorted = records.sorted { ($0.time.civilDate ?? "") > ($1.time.civilDate ?? "") }
-            feed.cards = ReleaseCard.group(sorted)
+            feed.cards = window.cards(from: records)
         } catch {
             guard !Task.isCancelled, feedKey == key, feed.requestID == requestID else { return }
             feed.error = error.localizedDescription
