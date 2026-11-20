@@ -331,6 +331,35 @@ struct PublicAPI {
     }
 }
 
+struct PosterFeedWindow {
+    let yesterday: String
+    let today: String
+    let tomorrow: String
+
+    init(today: String) {
+        self.today = today
+        yesterday = CalendarDay.offset(today, by: -1)
+        tomorrow = CalendarDay.next(today)
+    }
+
+    var exclusiveEnd: String { CalendarDay.next(tomorrow) }
+    var chronologicalDates: [String] { [yesterday, today, tomorrow] }
+
+    func label(for date: String) -> String? {
+        switch date {
+        case yesterday: "어제"
+        case today: "오늘"
+        case tomorrow: "내일"
+        default: nil
+        }
+    }
+
+    func cards(from events: [ReleaseEvent]) -> [ReleaseCard] {
+        let byDate = Dictionary(grouping: events) { $0.time.civilDate ?? "" }
+        return ReleaseCard.group([today, tomorrow, yesterday].flatMap { byDate[$0] ?? [] })
+    }
+}
+
 enum CalendarDay {
     static var iso: Calendar {
         var calendar = Calendar(identifier: .gregorian)
