@@ -77,7 +77,7 @@ struct ReleaseEvent: Decodable, Identifiable {
     }
 }
 
-struct ReleaseTime: Decodable {
+struct ReleaseTime: Decodable, Hashable {
     let type: String
     let date: String?
     let instantUtc: String?
@@ -92,6 +92,42 @@ struct ReleaseTime: Decodable {
         case "instant": [displayDate, displayTime].compactMap { $0 }.joined(separator: " ")
         default: [announcedYear.map(String.init), announcedPeriod].compactMap { $0 }.joined(separator: " ").isEmpty ? "미정" : [announcedYear.map(String.init), announcedPeriod].compactMap { $0 }.joined(separator: " ")
         }
+    }
+}
+
+/// Platform variants retain their IDs and can be opened individually.
+struct ReleaseCard: Identifiable {
+    private struct GameKey: Hashable {
+        let contentId: String
+        let market: String?
+        let time: ReleaseTime
+        let status: String
+        let origin: String
+    }
+
+    private(set) var variants: [ReleaseEvent]
+    var event: ReleaseEvent { variants[0] }
+    var id: String { event.id }
+    var devices: [String] { Set(variants.flatMap(\.devices)).sorted() }
+
+    static func group(_ events: [ReleaseEvent]) -> [Self] {
+        var cards: [Self] = []
+        var indices: [GameKey: Int] = [:]
+        for event in events {
+            guard event.kind == "game_release", let contentId = event.contentId else {
+                cards.append(Self(variants: [event]))
+                continue
+            }
+            let key = GameKey(contentId: contentId, market: event.releaseMarket, time: event.time,
+                              status: event.status, origin: event.dataOrigin)
+            if let index = indices[key] {
+                cards[index].variants.append(event)
+            } else {
+                indices[key] = cards.count
+                cards.append(Self(variants: [event]))
+            }
+        }
+        return cards
     }
 }
 
