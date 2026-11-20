@@ -56,7 +56,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GODIEOR/Info.plist;
 				GODIEOR_GOOGLE_CLIENT_ID = 988873532782-brpdi7ikj56d4k4sg4fkq80v78ccglep.apps.googleusercontent.com;
@@ -82,7 +82,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = GODIEOR/Info.plist;
 				GODIEOR_GOOGLE_CLIENT_ID = 988873532782-brpdi7ikj56d4k4sg4fkq80v78ccglep.apps.googleusercontent.com;
